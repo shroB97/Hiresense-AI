@@ -1,5 +1,15 @@
 from __future__ import annotations
+from app.ats.matching_engine import (
+    MatchReport,
+    create_match_report,
+)
 
+from app.extractors.structured_extractor import (
+    StructuredExtractionError,
+    extract_job_profile,
+    extract_resume_profile,
+)
+import pandas as pd
 import streamlit as st
 from app.parsers.resume_parser import (
     ResumeParserError,
@@ -280,6 +290,56 @@ def inject_styles() -> None:
                 padding: 1.5rem;
             }
         }
+	.match-score-panel {
+    padding: 1.6rem;
+    border: 1px solid #fed7aa;
+    border-radius: 20px;
+    background:
+        linear-gradient(
+            135deg,
+            #ffffff,
+            #fff7ed
+        );
+    text-align: center;
+    box-shadow:
+        0 12px 30px rgba(194, 65, 12, 0.08);
+}
+
+.match-score-number {
+    color: #c2410c;
+    font-size: 4rem;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.match-score-label {
+    margin-top: 0.5rem;
+    color: #6b7280;
+    font-size: 0.9rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.score-excellent {
+    color: #15803d;
+    font-weight: 700;
+}
+
+.score-strong {
+    color: #c2410c;
+    font-weight: 700;
+}
+
+.score-moderate {
+    color: #b45309;
+    font-weight: 700;
+}
+
+.score-low {
+    color: #b91c1c;
+    font-weight: 700;
+}
         </style>
         """,
         unsafe_allow_html=True,
@@ -408,7 +468,455 @@ def render_input_section():
 # =========================================================
 # INPUT VALIDATION
 # =========================================================
+def get_match_label(
+    percentage: float,
+) -> tuple[str, str]:
+    if percentage >= 85:
+        return (
+            "Excellent alignment",
+            "score-excellent",
+        )
 
+    if percentage >= 70:
+        return (
+            "Strong alignment",
+            "score-strong",
+        )
+
+    if percentage >= 50:
+        return (
+            "Moderate alignment",
+            "score-moderate",
+        )
+
+    return (
+        "Low alignment",
+        "score-low",
+    )
+
+
+def render_score_card(score: float):
+
+    match_label, _ = get_match_label(score)
+
+    with st.container(border=True):
+
+        st.markdown(
+            f"""
+            <h1 style="
+                text-align:center;
+                color:#c2410c;
+                font-size:72px;
+                margin-bottom:0px;
+            ">
+                {score:.0f}%
+            </h1>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        st.markdown(
+            "<h4 style='text-align:center; color:#6b7280;'>"
+            "HireSense Match Score"
+            "</h4>",
+            unsafe_allow_html=True,
+        )
+
+        st.markdown(
+            f"<h3 style='text-align:center; color:#ea580c;'>"
+            f"{match_label}"
+            f"</h3>",
+            unsafe_allow_html=True,
+        )
+
+
+def render_category_scores(
+    report: MatchReport,
+) -> None:
+    st.markdown("### Match by Category")
+
+    category_scores = [
+        (
+            "Skills",
+            report.skills_percentage,
+        ),
+        (
+            "Experience",
+            report.experience_percentage,
+        ),
+        (
+            "Responsibilities",
+            report.responsibilities_percentage,
+        ),
+        (
+            "Tools",
+            report.tools_percentage,
+        ),
+        (
+            "Education",
+            report.education_percentage,
+        ),
+        (
+            "Certifications",
+            report.certifications_percentage,
+        ),
+    ]
+
+    first_row = st.columns(3)
+    second_row = st.columns(3)
+
+    for index, (
+        category,
+        percentage,
+    ) in enumerate(category_scores):
+        target_column = (
+            first_row[index]
+            if index < 3
+            else second_row[index - 3]
+        )
+
+        with target_column:
+            st.metric(
+                category,
+                f"{percentage:.0f}%",
+            )
+
+            st.progress(
+                int(
+                    max(
+                        0,
+                        min(
+                            100,
+                            percentage,
+                        ),
+                    )
+                )
+            )
+
+
+def render_requirement_summary(
+    report: MatchReport,
+) -> None:
+    direct_matches = sum(
+        match.status == "direct_match"
+        for match in report.matches
+    )
+
+    related_matches = sum(
+        match.status == "related_evidence"
+        for match in report.matches
+    )
+
+    uncertain_matches = sum(
+        match.status == "uncertain"
+        for match in report.matches
+    )
+
+    missing_matches = sum(
+        match.status == "not_found"
+        for match in report.matches
+    )
+
+    st.markdown("### Requirement Summary")
+
+    col1, col2, col3, col4 = st.columns(4)
+
+    with col1:
+        st.metric(
+            "Direct Matches",
+            direct_matches,
+        )
+
+    with col2:
+        st.metric(
+            "Related Evidence",
+            related_matches,
+        )
+
+    with col3:
+        st.metric(
+            "Uncertain",
+            uncertain_matches,
+        )
+
+    with col4:
+        st.metric(
+            "Not Found",
+            missing_matches,
+        )
+
+
+def build_requirement_dataframe(
+    report: MatchReport,
+) -> pd.DataFrame:
+    rows: list[dict[str, object]] = []
+
+    status_labels = {
+        "direct_match": "Direct Match",
+        "related_evidence": "Related Evidence",
+        "uncertain": "Uncertain",
+        "not_found": "Not Found",
+    }
+
+    for match in report.matches:
+        rows.append(
+            {
+                "Requirement": match.requirement,
+                "Category": (
+                    match.category
+                    .replace("_", " ")
+                    .title()
+                ),
+                "Importance": (
+                    match.importance.title()
+                ),
+                "Status": status_labels[
+                    match.status
+                ],
+                "Match Credit": (
+                    f"{match.percentage_credit:.0f}%"
+                ),
+                "Evidence Source": (
+                    match.evidence_source
+                    or "Not available"
+                ),
+            }
+        )
+
+    return pd.DataFrame(rows)
+
+
+def render_gap_analysis(
+    report: MatchReport,
+) -> None:
+    st.markdown("### Gap Analysis")
+
+    matched_column, gap_column = st.columns(
+        2,
+        gap="large",
+    )
+
+    with matched_column:
+        with st.container(border=True):
+            st.markdown(
+                "#### Strong Alignments"
+            )
+
+            if report.strengths:
+                for strength in report.strengths:
+                    st.write(f"✓ {strength}")
+            else:
+                st.write(
+                    "No direct alignments were identified."
+                )
+
+    with gap_column:
+        with st.container(border=True):
+            st.markdown(
+                "#### Missing Requirements"
+            )
+
+            if report.missing_requirements:
+                for requirement in (
+                    report.missing_requirements
+                ):
+                    st.write(f"✕ {requirement}")
+            else:
+                st.write(
+                    "No missing requirements were identified."
+                )
+
+    if report.uncertain_requirements:
+        with st.expander(
+            "Review uncertain requirements"
+        ):
+            for requirement in (
+                report.uncertain_requirements
+            ):
+                st.write(f"• {requirement}")
+
+
+def render_requirement_evidence(
+    report: MatchReport,
+) -> None:
+    st.markdown("### Requirement Evidence")
+
+    requirement_table = (
+        build_requirement_dataframe(
+            report
+        )
+    )
+
+    status_filter = st.multiselect(
+        "Filter by match status",
+        options=[
+            "Direct Match",
+            "Related Evidence",
+            "Uncertain",
+            "Not Found",
+        ],
+        default=[
+            "Direct Match",
+            "Related Evidence",
+            "Uncertain",
+            "Not Found",
+        ],
+    )
+
+    if status_filter:
+        filtered_table = requirement_table[
+            requirement_table[
+                "Status"
+            ].isin(status_filter)
+        ]
+    else:
+        filtered_table = requirement_table
+
+    st.dataframe(
+        filtered_table,
+        use_container_width=True,
+        hide_index=True,
+    )
+
+    st.markdown(
+        "#### Detailed Evidence"
+    )
+
+    status_labels = {
+        "direct_match": "Direct Match",
+        "related_evidence": "Related Evidence",
+        "uncertain": "Uncertain",
+        "not_found": "Not Found",
+    }
+
+    for index, match in enumerate(
+        report.matches,
+        start=1,
+    ):
+        status_label = status_labels[
+            match.status
+        ]
+
+        with st.expander(
+            f"{index}. {match.requirement} "
+            f"— {status_label} "
+            f"({match.percentage_credit:.0f}%)"
+        ):
+            detail_col1, detail_col2 = (
+                st.columns(2)
+            )
+
+            with detail_col1:
+                st.write(
+                    f"**Category:** "
+                    f"{match.category.replace('_', ' ').title()}"
+                )
+
+                st.write(
+                    f"**Importance:** "
+                    f"{match.importance.title()}"
+                )
+
+            with detail_col2:
+                st.write(
+                    f"**Match credit:** "
+                    f"{match.percentage_credit:.0f}%"
+                )
+
+                st.write(
+                    f"**Evidence source:** "
+                    f"{match.evidence_source or 'Not available'}"
+                )
+
+            st.write(
+                f"**Assessment:** "
+                f"{match.explanation}"
+            )
+
+            if match.evidence:
+                st.write(
+                    "**Résumé evidence:**"
+                )
+
+                st.info(
+                    match.evidence
+                )
+
+
+def render_match_dashboard(
+    report: MatchReport,
+) -> None:
+    st.divider()
+
+    render_kicker(
+        "Evidence-based fit assessment"
+    )
+
+    st.header(
+        "HireSense Match Report"
+    )
+
+    score_column, summary_column = (
+        st.columns(
+            [1, 2],
+            gap="large",
+        )
+    )
+
+    with score_column:
+        render_score_card(
+            report.overall_percentage
+        )
+
+    with summary_column:
+        st.markdown(
+            "### Overall résumé-to-job alignment"
+        )
+
+        st.progress(
+            int(
+                max(
+                    0,
+                    min(
+                        100,
+                        report.overall_percentage,
+                    ),
+                )
+            )
+        )
+
+        st.write(
+            "The score combines skills, experience, "
+            "responsibilities, tools, education, and "
+            "certification alignment."
+        )
+
+        st.metric(
+            "Document Similarity",
+            (
+                f"{report.document_similarity_percentage:.0f}%"
+            ),
+        )
+
+    render_category_scores(report)
+
+    st.divider()
+
+    render_requirement_summary(report)
+
+    st.divider()
+
+    render_gap_analysis(report)
+
+    st.divider()
+
+    render_requirement_evidence(report)
+
+    st.caption(
+        "The HireSense Match Score is an evidence-based "
+        "résumé-to-job alignment estimate. It is not an "
+        "employer-issued ATS score or hiring decision."
+    )
 def render_analysis_result(
     uploaded_resume,
     job_description: str,
@@ -431,30 +939,45 @@ def render_analysis_result(
             file_bytes=uploaded_resume.getvalue(),
         )
 
+        with st.spinner(
+            "Analyzing your résumé and the job description..."
+        ):
+            resume_profile = extract_resume_profile(
+                resume_result.text
+            )
+
+            job_profile = extract_job_profile(
+                job_description
+            )
+
+            match_report = create_match_report(
+                resume_profile,
+                job_profile,
+            )
+
     except ResumeParserError as exc:
+        st.error(str(exc))
+        return
+
+    except StructuredExtractionError as exc:
         st.error(str(exc))
         return
 
     except Exception as exc:
         st.error(
-            "An unexpected error occurred while "
-            "reading the resume."
+            "An unexpected error occurred during analysis."
         )
 
-        with st.expander(
-            "Technical details"
-        ):
+        with st.expander("Technical details"):
             st.code(str(exc))
 
         return
 
     st.success(
-        "Resume text extracted successfully."
+        "Resume and job description analyzed successfully."
     )
 
-    metric_col1, metric_col2, metric_col3 = (
-        st.columns(3)
-    )
+    metric_col1, metric_col2, metric_col3 = st.columns(3)
 
     with metric_col1:
         st.metric(
@@ -471,8 +994,7 @@ def render_analysis_result(
     with metric_col3:
         page_value = (
             resume_result.page_count
-            if resume_result.page_count
-            is not None
+            if resume_result.page_count is not None
             else "Not available"
         )
 
@@ -506,19 +1028,19 @@ def render_analysis_result(
             )
 
             st.write(
-                f"**{len(job_description):,} "
-                "characters**"
+                f"**{len(job_description):,} characters**"
             )
 
-    st.subheader(
-        "Extracted Resume Preview"
-    )
+    st.divider()
+    render_match_dashboard(
+    match_report
+)
+    st.divider()
+
+    st.subheader("Extracted Resume Preview")
 
     preview_length = 4_000
-
-    preview_text = resume_result.text[
-        :preview_length
-    ]
+    preview_text = resume_result.text[:preview_length]
 
     st.text_area(
         "Resume text",
@@ -539,11 +1061,7 @@ def render_analysis_result(
         st.text(
             resume_result.text
         )
-
-    st.info(
-        "The resume is now ready for skill extraction "
-        "and ATS requirement matching."
-    )
+        
 
 # =========================================================
 # WORKFLOW
