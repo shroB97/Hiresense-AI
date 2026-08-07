@@ -9,6 +9,11 @@ from app.extractors.structured_extractor import (
     extract_job_profile,
     extract_resume_profile,
 )
+from app.recommendations.resume_optimizer import (
+    ResumeOptimizationError,
+    ResumeOptimizationReport,
+    optimize_resume,
+)
 import pandas as pd
 import streamlit as st
 from app.parsers.resume_parser import (
@@ -917,6 +922,104 @@ def render_match_dashboard(
         "résumé-to-job alignment estimate. It is not an "
         "employer-issued ATS score or hiring decision."
     )
+def render_resume_optimizer(
+    report: ResumeOptimizationReport,
+) -> None:
+
+    st.divider()
+
+    render_kicker(
+        "AI resume optimization"
+    )
+
+    st.header(
+        "Resume Improvement Recommendations"
+    )
+
+    st.caption(
+        "Suggestions are restricted to experience already "
+        "supported by your resume."
+    )
+
+    if report.professional_summary_suggestion:
+        with st.container(border=True):
+            st.markdown(
+                "### Suggested Professional Summary"
+            )
+
+            st.write(
+                report.professional_summary_suggestion
+            )
+
+    if report.bullet_suggestions:
+        st.markdown(
+            "### Suggested Bullet Improvements"
+        )
+
+        for index, suggestion in enumerate(
+            report.bullet_suggestions,
+            start=1,
+        ):
+            with st.expander(
+                f"{index}. "
+                f"{suggestion.target_requirement}"
+            ):
+                st.write(
+                    "**Resume evidence:**"
+                )
+
+                st.info(
+                    suggestion.original_evidence
+                )
+
+                st.write(
+                    "**Suggested rewrite:**"
+                )
+
+                st.success(
+                    suggestion.suggested_rewrite
+                )
+
+                st.write(
+                    f"**Why:** {suggestion.reason}"
+                )
+
+    if report.keywords_to_emphasize:
+        st.markdown(
+            "### Keywords Already Supported by Your Resume"
+        )
+
+        st.write(
+            " · ".join(
+                report.keywords_to_emphasize
+            )
+        )
+
+    if report.missing_but_unverified_skills:
+        st.markdown(
+            "### Requirements Not Verified in Your Resume"
+        )
+
+        st.warning(
+            "Do not add these unless you genuinely "
+            "have this experience."
+        )
+
+        for skill in (
+            report.missing_but_unverified_skills
+        ):
+            st.write(
+                f"• {skill}"
+            )
+
+    if report.warnings:
+        with st.expander(
+            "Optimization warnings"
+        ):
+            for warning in report.warnings:
+                st.write(
+                    f"• {warning}"
+                )
 def render_analysis_result(
     uploaded_resume,
     job_description: str,
@@ -955,11 +1058,20 @@ def render_analysis_result(
                 job_profile,
             )
 
+            optimization_report = optimize_resume(
+                resume_profile=resume_profile,
+                job_profile=job_profile,
+            )
+
     except ResumeParserError as exc:
         st.error(str(exc))
         return
 
     except StructuredExtractionError as exc:
+        st.error(str(exc))
+        return
+
+    except ResumeOptimizationError as exc:
         st.error(str(exc))
         return
 
@@ -1014,6 +1126,7 @@ def render_analysis_result(
             key="resume_summary",
         ):
             st.caption("RESUME RECEIVED")
+
             st.write(
                 f"**{resume_result.filename}**"
             )
@@ -1031,16 +1144,25 @@ def render_analysis_result(
                 f"**{len(job_description):,} characters**"
             )
 
-    st.divider()
     render_match_dashboard(
-    match_report
-)
+        match_report
+    )
+
+    render_resume_optimizer(
+        optimization_report
+    )
+
     st.divider()
 
-    st.subheader("Extracted Resume Preview")
+    st.subheader(
+        "Extracted Resume Preview"
+    )
 
     preview_length = 4_000
-    preview_text = resume_result.text[:preview_length]
+
+    preview_text = resume_result.text[
+        :preview_length
+    ]
 
     st.text_area(
         "Resume text",
@@ -1061,7 +1183,6 @@ def render_analysis_result(
         st.text(
             resume_result.text
         )
-        
 
 # =========================================================
 # WORKFLOW
