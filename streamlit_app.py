@@ -15,6 +15,7 @@ from app.recommendations.resume_optimizer import (
     optimize_resume,
 )
 import pandas as pd
+import plotly.express as px
 import streamlit as st
 from app.parsers.resume_parser import (
     ResumeParserError,
@@ -598,6 +599,63 @@ def render_category_scores(
                 )
             )
 
+def render_match_chart(
+    report: MatchReport,
+) -> None:
+    st.markdown("### Match Breakdown")
+
+    chart_data = pd.DataFrame(
+        {
+            "Category": [
+                "Skills",
+                "Experience",
+                "Responsibilities",
+                "Tools",
+                "Education",
+                "Certifications",
+            ],
+            "Match": [
+                report.skills_percentage,
+                report.experience_percentage,
+                report.responsibilities_percentage,
+                report.tools_percentage,
+                report.education_percentage,
+                report.certifications_percentage,
+            ],
+        }
+    )
+
+    fig = px.bar(
+        chart_data,
+        x="Match",
+        y="Category",
+        orientation="h",
+        text="Match",
+        range_x=[0, 100],
+    )
+
+    fig.update_traces(
+        texttemplate="%{text:.0f}%",
+        textposition="outside",
+    )
+
+    fig.update_layout(
+        height=420,
+        margin=dict(
+            l=20,
+            r=40,
+            t=20,
+            b=20,
+        ),
+        xaxis_title="Match Percentage",
+        yaxis_title="",
+        showlegend=False,
+    )
+
+    st.plotly_chart(
+        fig,
+        use_container_width=True,
+    )
 
 def render_requirement_summary(
     report: MatchReport,
@@ -904,6 +962,7 @@ def render_match_dashboard(
         )
 
     render_category_scores(report)
+    render_match_chart(report)
 
     st.divider()
 
@@ -1020,10 +1079,253 @@ def render_resume_optimizer(
                 st.write(
                     f"• {warning}"
                 )
+def render_resume_intelligence(
+    resume_profile,
+) -> None:
+    st.divider()
+
+    render_kicker(
+        "Resume intelligence"
+    )
+
+    st.header(
+        "Candidate Profile"
+    )
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.metric(
+            "Candidate",
+            resume_profile.candidate_name
+            or "Not detected",
+        )
+
+    with col2:
+        if (
+            resume_profile.total_experience_years
+            is not None
+        ):
+            experience_value = (
+                f"{resume_profile.total_experience_years:.1f} years"
+            )
+        else:
+            experience_value = (
+                "Not determined"
+            )
+
+        st.metric(
+            "Experience",
+            experience_value,
+        )
+
+    with col3:
+        st.metric(
+            "Skills Detected",
+            len(resume_profile.skills),
+        )
+
+    if resume_profile.professional_summary:
+        with st.container(border=True):
+            st.markdown(
+                "### Professional Summary"
+            )
+
+            st.write(
+                resume_profile.professional_summary
+            )
+
+    if resume_profile.skills:
+        st.markdown(
+            "### Skills"
+        )
+
+        st.write(
+            " · ".join(
+                resume_profile.skills[:20]
+            )
+        )
+
+    if resume_profile.tools:
+        st.markdown(
+            "### Tools & Technologies"
+        )
+
+        st.write(
+            " · ".join(
+                resume_profile.tools[:20]
+            )
+        )
+
+    if resume_profile.domains:
+        st.markdown(
+            "### Domain Experience"
+        )
+
+        st.write(
+            " · ".join(
+                resume_profile.domains[:15]
+            )
+        )
+
+    if resume_profile.education:
+        st.markdown(
+            "### Education"
+        )
+
+        for education in (
+            resume_profile.education
+        ):
+            education_parts = [
+                education.degree,
+                education.field_of_study,
+                education.institution,
+            ]
+
+            education_text = " — ".join(
+                value
+                for value in education_parts
+                if value
+            )
+
+            if education_text:
+                st.write(
+                    f"• {education_text}"
+                )
+
+    if resume_profile.certifications:
+        st.markdown(
+            "### Certifications"
+        )
+
+        for certification in (
+            resume_profile.certifications
+        ):
+            st.write(
+                f"• {certification.name}"
+            )
+def render_job_intelligence(
+    job_profile,
+) -> None:
+    st.divider()
+
+    render_kicker(
+        "Job intelligence"
+    )
+
+    st.header(
+        "Role Requirements"
+    )
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.metric(
+            "Job Title",
+            job_profile.job_title
+            or "Not provided",
+        )
+
+    with col2:
+        if (
+            job_profile.minimum_experience_years
+            is not None
+        ):
+            experience_value = (
+                f"{job_profile.minimum_experience_years:.0f}+ years"
+            )
+        else:
+            experience_value = (
+                "Not specified"
+            )
+
+        st.metric(
+            "Minimum Experience",
+            experience_value,
+        )
+
+    with col3:
+        st.metric(
+            "Requirements",
+            len(job_profile.requirements),
+        )
+
+    if job_profile.summary:
+        with st.container(border=True):
+            st.markdown(
+                "### Role Summary"
+            )
+
+            st.write(
+                job_profile.summary
+            )
+
+    if job_profile.required_skills:
+        st.markdown(
+            "### Required Skills"
+        )
+
+        st.write(
+            " · ".join(
+                job_profile.required_skills[:20]
+            )
+        )
+
+    if job_profile.preferred_skills:
+        st.markdown(
+            "### Preferred Skills"
+        )
+
+        st.write(
+            " · ".join(
+                job_profile.preferred_skills[:20]
+            )
+        )
+
+    if job_profile.tools:
+        st.markdown(
+            "### Tools & Technologies"
+        )
+
+        st.write(
+            " · ".join(
+                job_profile.tools[:20]
+            )
+        )
+
+    if job_profile.responsibilities:
+        st.markdown(
+            "### Key Responsibilities"
+        )
+
+        for responsibility in (
+            job_profile.responsibilities[:10]
+        ):
+            st.write(
+                f"• {responsibility}"
+            )
+def render_statistics() -> None:
+    st.markdown("### Why HireSense AI?")
+
+    col1, col2, col3, col4 = st.columns(4)
+
+    with col1:
+        st.metric("Resume Formats", "PDF/DOCX")
+
+    with col2:
+        st.metric("Analysis Layers", "5")
+
+    with col3:
+        st.metric("Evidence Based", "Yes")
+
+    with col4:
+        st.metric("Explainable Matching", "100%")
+
 def render_analysis_result(
     uploaded_resume,
     job_description: str,
 ) -> None:
+
     if uploaded_resume is None:
         st.warning(
             "Please upload a PDF or DOCX resume."
@@ -1036,32 +1338,56 @@ def render_analysis_result(
         )
         return
 
+    progress = st.progress(0)
+    status = st.empty()
+
     try:
+
+        status.write("Reading resume...")
+
         resume_result = parse_resume(
             filename=uploaded_resume.name,
             file_bytes=uploaded_resume.getvalue(),
         )
 
-        with st.spinner(
-            "Analyzing your résumé and the job description..."
-        ):
-            resume_profile = extract_resume_profile(
-                resume_result.text
-            )
+        progress.progress(20)
 
-            job_profile = extract_job_profile(
-                job_description
-            )
+        status.write("Understanding resume...")
 
-            match_report = create_match_report(
-                resume_profile,
-                job_profile,
-            )
+        resume_profile = extract_resume_profile(
+            resume_result.text
+        )
 
-            optimization_report = optimize_resume(
-                resume_profile=resume_profile,
-                job_profile=job_profile,
-            )
+        progress.progress(45)
+
+        status.write("Understanding job description...")
+
+        job_profile = extract_job_profile(
+            job_description
+        )
+
+        progress.progress(65)
+
+        status.write("Comparing resume with job requirements...")
+
+        match_report = create_match_report(
+            resume_profile,
+            job_profile,
+        )
+
+        progress.progress(82)
+
+        status.write("Generating resume recommendations...")
+
+        optimization_report = optimize_resume(
+            resume_profile=resume_profile,
+            job_profile=job_profile,
+        )
+
+        progress.progress(100)
+
+        status.success("Career report ready.")
+            
 
     except ResumeParserError as exc:
         st.error(str(exc))
@@ -1143,6 +1469,14 @@ def render_analysis_result(
             st.write(
                 f"**{len(job_description):,} characters**"
             )
+
+    render_resume_intelligence(
+        resume_profile
+    )
+
+    render_job_intelligence(
+        job_profile
+    )
 
     render_match_dashboard(
         match_report
@@ -1342,6 +1676,8 @@ def main() -> None:
     inject_styles()
     render_header()
     render_hero()
+
+    render_statistics()
 
     uploaded_resume, job_description = (
         render_input_section()
