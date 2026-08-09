@@ -105,14 +105,17 @@ class JobRequirement(BaseModel):
     requirement: str
 
     category: Literal[
-        "skill",
+        "technical_skill",
         "tool",
-        "experience",
-        "responsibility",
-        "education",
         "certification",
-        "domain",
         "soft_skill",
+        "responsibility",
+        "experience",
+        "education",
+        "domain",
+        "methodology",
+        "leadership",
+        "business_impact",
         "other",
     ]
 

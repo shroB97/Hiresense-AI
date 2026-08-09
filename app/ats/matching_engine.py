@@ -88,12 +88,18 @@ class MatchReport(BaseModel):
 
 
 CATEGORY_WEIGHTS = {
-    "skill": 0.35,
-    "experience": 0.25,
-    "responsibility": 0.20,
+    "technical_skill": 0.25,
     "tool": 0.10,
-    "education": 0.05,
     "certification": 0.05,
+    "soft_skill": 0.10,
+    "responsibility": 0.20,
+    "experience": 0.10,
+    "education": 0.05,
+    "domain": 0.05,
+    "methodology": 0.05,
+    "leadership": 0.03,
+    "business_impact": 0.02,
+    "other": 0.00,
 }
 
 
@@ -404,16 +410,7 @@ def all_job_requirements(
     requirements.extend(
         JobRequirement(
             requirement=item,
-            category="skill",
-            importance="required",
-        )
-        for item in profile.required_skills
-    )
-
-    requirements.extend(
-        JobRequirement(
-            requirement=item,
-            category="skill",
+            category="technical_skill",
             importance="preferred",
         )
         for item in profile.preferred_skills
@@ -570,35 +567,63 @@ def create_match_report(
     )
 
     return MatchReport(
-        overall_percentage=round(overall, 1),
-        skills_percentage=scores["skill"],
-        experience_percentage=scores["experience"],
-        responsibilities_percentage=scores[
-            "responsibility"
-        ],
-        tools_percentage=scores["tool"],
-        education_percentage=scores["education"],
-        certifications_percentage=scores[
-            "certification"
-        ],
-        document_similarity_percentage=round(
-            document_similarity,
-            1,
-        ),
-        matches=matches,
-        strengths=[
-            match.requirement
-            for match in matches
-            if match.status == "direct_match"
-        ],
-        missing_requirements=[
-            match.requirement
-            for match in matches
-            if match.status == "not_found"
-        ],
-        uncertain_requirements=[
-            match.requirement
-            for match in matches
-            if match.status == "uncertain"
-        ],
-    )
+    overall_percentage=round(
+        overall,
+        1,
+    ),
+
+    skills_percentage=scores.get(
+        "technical_skill",
+        0.0,
+    ),
+
+    experience_percentage=scores.get(
+        "experience",
+        0.0,
+    ),
+
+    responsibilities_percentage=scores.get(
+        "responsibility",
+        0.0,
+    ),
+
+    tools_percentage=scores.get(
+        "tool",
+        0.0,
+    ),
+
+    education_percentage=scores.get(
+        "education",
+        0.0,
+    ),
+
+    certifications_percentage=scores.get(
+        "certification",
+        0.0,
+    ),
+
+    document_similarity_percentage=round(
+        document_similarity,
+        1,
+    ),
+
+    matches=matches,
+
+    strengths=[
+        match.requirement
+        for match in matches
+        if match.status == "direct_match"
+    ],
+
+    missing_requirements=[
+        match.requirement
+        for match in matches
+        if match.status == "not_found"
+    ],
+
+    uncertain_requirements=[
+        match.requirement
+        for match in matches
+        if match.status == "uncertain"
+    ],
+)

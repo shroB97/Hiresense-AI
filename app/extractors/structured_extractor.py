@@ -100,17 +100,29 @@ def extract_job_profile(
             ),
             input=[
                 {
-                    "role": "developer",
-                    "content": (
-                        "Extract structured hiring requirements from the job "
-                        "description. Use only the supplied posting. Separate "
-                        "required and preferred qualifications when supported "
-                        "by the wording. Preserve technical and industry terms. "
-                        "Do not invent requirements, salary, company details, "
-                        "or interview stages. Put ambiguous requirements into "
-                        "extraction_warnings."
-                    ),
-                },
+                   "role": "developer",
+                   "content": (
+        "Extract hiring requirements from the job posting. "
+        "Create atomic requirements: each requirement should represent "
+        "one independently assessable capability, qualification, tool, "
+        "responsibility, competency, methodology, domain, certification, "
+        "education requirement, or experience requirement. "
+        ""
+        "Examples: if the posting says 'Strong communication, stakeholder "
+        "management, and leadership skills', create three separate "
+        "requirements rather than one combined sentence. "
+        ""
+        "If the posting says 'Experience with Power BI or Tableau', preserve "
+        "the alternative relationship rather than inventing requirements. "
+        ""
+        "Categorize each requirement as technical_skill, tool, certification, "
+        "soft_skill, responsibility, experience, education, domain, "
+        "methodology, leadership, business_impact, or other. "
+        ""
+        "Mark required versus preferred only when the posting supports it. "
+        "Do not invent requirements."
+    ),
+},
                 {
                     "role": "user",
                     "content": (

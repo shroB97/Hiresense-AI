@@ -14,6 +14,10 @@ from app.recommendations.resume_optimizer import (
     ResumeOptimizationReport,
     optimize_resume,
 )
+from app.ats.explainable_matching_engine import (
+    ExplainableMatchReport,
+    create_explainable_match_report,
+)
 import pandas as pd
 import plotly.express as px
 import streamlit as st
@@ -981,6 +985,276 @@ def render_match_dashboard(
         "résumé-to-job alignment estimate. It is not an "
         "employer-issued ATS score or hiring decision."
     )
+def render_explainable_match_dashboard(
+    report: ExplainableMatchReport,
+) -> None:
+
+    st.divider()
+
+    render_kicker(
+        "Explainable AI match assessment"
+    )
+
+    st.header(
+        "HireSense Explainable Match Report"
+    )
+
+    # -----------------------------------------
+    # OVERALL SCORE
+    # -----------------------------------------
+
+    score_col, summary_col = st.columns(
+        [1, 2],
+        gap="large",
+    )
+
+    with score_col:
+        render_score_card(
+            report.overall_score
+        )
+
+    with summary_col:
+        st.markdown(
+            "### Overall résumé-to-job alignment"
+        )
+
+        st.progress(
+            int(
+                max(
+                    0,
+                    min(
+                        100,
+                        report.overall_score,
+                    ),
+                )
+            )
+        )
+
+        st.write(
+            "This score is calculated from individual "
+            "job requirements and the résumé evidence "
+            "supporting each requirement."
+        )
+
+    # -----------------------------------------
+    # REQUIREMENT SUMMARY
+    # -----------------------------------------
+
+    st.markdown(
+        "### Requirement Summary"
+    )
+
+    col1, col2, col3, col4 = st.columns(4)
+
+    with col1:
+        st.metric(
+            "Direct Matches",
+            report.direct_matches,
+        )
+
+    with col2:
+        st.metric(
+            "Related Evidence",
+            report.related_matches,
+        )
+
+    with col3:
+        st.metric(
+            "Uncertain",
+            report.uncertain_matches,
+        )
+
+    with col4:
+        st.metric(
+            "Missing",
+            report.missing_matches,
+        )
+
+    # -----------------------------------------
+    # CATEGORY SCORES
+    # -----------------------------------------
+
+    st.divider()
+
+    st.markdown(
+        "### Match by Category"
+    )
+
+    category_labels = {
+        "technical_skill": "Technical Skills",
+        "tool": "Tools",
+        "certification": "Certifications",
+        "soft_skill": "Soft Skills",
+        "responsibility": "Responsibilities",
+        "experience": "Experience",
+        "education": "Education",
+        "domain": "Domain Knowledge",
+        "methodology": "Methodologies",
+        "leadership": "Leadership",
+        "business_impact": "Business Impact",
+        "other": "Other",
+    }
+
+    if report.category_results:
+
+        category_columns = st.columns(3)
+
+        for index, category in enumerate(
+            report.category_results
+        ):
+
+            target_column = category_columns[
+                index % 3
+            ]
+
+            with target_column:
+
+                label = category_labels.get(
+                    category.category,
+                    category.category
+                    .replace("_", " ")
+                    .title(),
+                )
+
+                st.metric(
+                    label,
+                    f"{category.score:.0f}%",
+                )
+
+                st.caption(
+                    f"{category.requirements} "
+                    f"requirement"
+                    f"{'' if category.requirements == 1 else 's'}"
+                )
+
+    # -----------------------------------------
+    # REQUIREMENT-BY-REQUIREMENT EVIDENCE
+    # -----------------------------------------
+
+    st.divider()
+
+    st.markdown(
+        "### Requirement Evidence Map"
+    )
+
+    st.caption(
+        "Every job requirement is evaluated independently "
+        "against evidence retrieved from the résumé."
+    )
+
+    status_labels = {
+        "direct_match": "✅ Direct Match",
+        "related_evidence": "🟡 Related Evidence",
+        "uncertain": "⚠️ Uncertain",
+        "not_found": "❌ Not Found",
+    }
+
+    for index, result in enumerate(
+        report.requirement_results,
+        start=1,
+    ):
+
+        status_label = status_labels.get(
+            result.status,
+            result.status,
+        )
+
+        expander_title = (
+            f"{index}. {result.requirement} "
+            f"— {status_label}"
+        )
+
+        with st.expander(
+            expander_title,
+            expanded=(
+                result.status
+                in {
+                    "related_evidence",
+                    "uncertain",
+                    "not_found",
+                }
+            ),
+        ):
+
+            info_col1, info_col2, info_col3 = (
+                st.columns(3)
+            )
+
+            with info_col1:
+                st.write(
+                    "**Category**"
+                )
+
+                st.write(
+                    category_labels.get(
+                        result.category,
+                        result.category
+                        .replace("_", " ")
+                        .title(),
+                    )
+                )
+
+            with info_col2:
+                st.write(
+                    "**Importance**"
+                )
+
+                st.write(
+                    result.importance.title()
+                )
+
+            with info_col3:
+                st.write(
+                    "**AI Confidence**"
+                )
+
+                st.write(
+                    f"{result.confidence:.0f}%"
+                )
+
+            st.write(
+                "**Assessment**"
+            )
+
+            st.write(
+                result.reason
+            )
+
+            if result.evidence_text:
+
+                st.write(
+                    "**Résumé Evidence**"
+                )
+
+                st.info(
+                    result.evidence_text
+                )
+
+                if result.evidence_source:
+                    st.caption(
+                        "Evidence source: "
+                        f"{result.evidence_source}"
+                    )
+
+            else:
+
+                st.warning(
+                    "No supporting résumé evidence "
+                    "was verified for this requirement."
+                )
+
+    # -----------------------------------------
+    # EXPLANATION
+    # -----------------------------------------
+
+    st.divider()
+
+    st.caption(
+        "AI Confidence indicates how confident HireSense is "
+        "in the match classification. It is not the candidate's "
+        "match percentage. The overall score is calculated "
+        "separately from requirement statuses and importance."
+    )
 def render_resume_optimizer(
     report: ResumeOptimizationReport,
 ) -> None:
@@ -1368,12 +1642,13 @@ def render_analysis_result(
 
         progress.progress(65)
 
-        status.write("Comparing resume with job requirements...")
+        status.write("Validating résumé evidence against job requirements...")
 
-        match_report = create_match_report(
-            resume_profile,
-            job_profile,
-        )
+        explainable_report = create_explainable_match_report(
+        resume_profile=resume_profile,
+        job_profile=job_profile,
+    )
+
 
         progress.progress(82)
 
@@ -1478,8 +1753,8 @@ def render_analysis_result(
         job_profile
     )
 
-    render_match_dashboard(
-        match_report
+    render_explainable_match_dashboard(
+        explainable_report
     )
 
     render_resume_optimizer(
