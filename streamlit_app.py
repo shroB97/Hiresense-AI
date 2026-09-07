@@ -2383,6 +2383,30 @@ def inject_styles() -> None:
         .hs-category-count { color:var(--muted); font-size:.8rem; }
         .hs-category-bar { height:.38rem; margin-top:.62rem; border-radius:99px; background:#e5edf8; overflow:hidden; }
         .hs-category-bar span { display:block; height:100%; border-radius:99px; background:linear-gradient(90deg,#2563eb,#06b6d4,#10b981); transform-origin:left; animation:hs-bar .8s ease-out both; }
+        .hs-report-kicker { display:flex; align-items:center; gap:.55rem; color:#0e7490; font-size:.74rem; font-weight:850; letter-spacing:.12em; text-transform:uppercase; margin:.15rem 0 .2rem; }
+        .hs-report-kicker:before { content:""; width:1.8rem; height:3px; border-radius:99px; background:linear-gradient(90deg,#2563eb,#10b981); }
+        .hs-focus-card { height:100%; min-height:148px; padding:1rem 1.05rem; border:1px solid var(--line); border-radius:16px; background:linear-gradient(145deg,#fff,#f8fbff); box-shadow:0 8px 22px rgba(15,35,68,.05); transition:transform .2s ease,box-shadow .2s ease; }
+        .hs-focus-card:hover { transform:translateY(-3px); box-shadow:0 14px 30px rgba(15,35,68,.09); }
+        .hs-focus-card.clarify { border-top:3px solid #2563eb; }
+        .hs-focus-card.verify { border-top:3px solid #f59e0b; }
+        .hs-focus-index { color:#64748b; font-size:.68rem; font-weight:850; letter-spacing:.12em; text-transform:uppercase; }
+        .hs-focus-card strong { display:block; color:var(--navy); font-size:.95rem; line-height:1.35; margin:.38rem 0 .62rem; }
+        .hs-focus-footer { display:flex; align-items:center; justify-content:space-between; gap:.5rem; color:#64748b; font-size:.73rem; }
+        .hs-focus-type { border-radius:999px; padding:.25rem .5rem; font-weight:760; background:#eff6ff; color:#1d4ed8; }
+        .hs-focus-card.verify .hs-focus-type { background:#fff7ed; color:#b45309; }
+        .hs-compact-banner { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; border:1px solid #cfe0f4; border-radius:15px; background:linear-gradient(120deg,#f7fbff,#eefbf7); padding:.9rem 1rem; margin:.2rem 0 1rem; }
+        .hs-compact-banner strong { color:var(--navy); }
+        .hs-compact-banner span { color:#64748b; font-size:.83rem; line-height:1.45; }
+        .hs-meta-row { display:flex; flex-wrap:wrap; gap:.42rem; margin:.25rem 0 .75rem; }
+        .hs-meta-pill { display:inline-flex; align-items:center; border-radius:999px; padding:.3rem .58rem; font-size:.73rem; font-weight:720; color:#334155; background:#f1f5f9; border:1px solid #e2e8f0; }
+        .hs-meta-pill.blue { color:#1d4ed8; background:#eff6ff; border-color:#bfdbfe; }
+        .hs-meta-pill.green { color:#047857; background:#ecfdf5; border-color:#a7f3d0; }
+        .hs-meta-pill.amber { color:#b45309; background:#fffbeb; border-color:#fde68a; }
+        .hs-meta-pill.rose { color:#be123c; background:#fff1f2; border-color:#fecdd3; }
+        .hs-evidence-quote { border-left:4px solid #2563eb; border-radius:0 12px 12px 0; background:#eff6ff; color:#174ea6; padding:.8rem .95rem; line-height:1.55; margin:.2rem 0 .45rem; }
+        .hs-keywords { display:flex; flex-wrap:wrap; gap:.42rem; margin:.45rem 0 .8rem; }
+        .hs-keywords span { border-radius:999px; padding:.32rem .62rem; color:#0f5e55; background:#ecfdf5; border:1px solid #a7f3d0; font-size:.75rem; font-weight:720; }
+        .hs-results-note { color:#64748b; font-size:.82rem; margin:-.2rem 0 .7rem; }
         .hs-resume-banner { display:flex; justify-content:space-between; align-items:center; gap:1rem; border-radius:14px 14px 0 0; padding:.78rem 1rem; color:#ddecff; background:linear-gradient(120deg,#0b1f3a,#164e75); margin-top:.35rem; }
         .hs-resume-banner strong { color:#fff; }
         .hs-resume-banner span { font-size:.76rem; color:#bcd4ed; }
@@ -2813,72 +2837,38 @@ def render_resume_preview(candidate: CandidateProfile, optimized: OptimizedResum
         st.markdown(optimized_resume_markdown(candidate, optimized))
 
 
-def render_report(settings: Settings, use_ai: bool) -> None:
-    report: MatchReport | None = st.session_state.report
-    candidate: CandidateProfile | None = st.session_state.candidate
-    parsed: ParsedResume | None = st.session_state.parsed_resume
-    if not report or not candidate or not parsed:
-        return
+def _short_ui_text(value: str, limit: int = 112) -> str:
+    cleaned = clean_line(value)
+    if len(cleaned) <= limit:
+        return cleaned
+    shortened = cleaned[: limit - 1].rsplit(" ", 1)[0]
+    return f"{shortened or cleaned[: limit - 1]}…"
 
-    st.divider()
-    st.markdown('<div class="hs-eyebrow">Explainable AI Match Assessment</div>', unsafe_allow_html=True)
-    st.header("HireSense Explainable Match Report")
-    job_line = " · ".join(
-        value
-        for value in (
-            st.session_state.job_title,
-            st.session_state.company,
-            st.session_state.job_location,
-        )
-        if value
-    )
-    if job_line:
-        st.caption(job_line)
-    st.markdown(
-        f"""
-        <div class="hs-score-panel">
-          <div class="hs-score-ring" style="--score:{report.score}"><div><strong>{report.score}%</strong><span>match</span></div></div>
-          <div class="hs-score-copy">
-            <span>Overall résumé-to-job alignment</span>
-            <h3>{html.escape(report.alignment)}</h3>
-            <p>Calculated from independently assessed job requirements and the exact résumé evidence supporting each one.</p>
-          </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-    st.write("This score is calculated from individual job requirements and the résumé evidence supporting each requirement.")
 
-    for warning in report.warnings:
-        st.warning(warning)
-    st.caption(
-        f"{parsed.filename} · {parsed.word_count:,} words · {len(report.matches)} requirements · {report.mode}"
-    )
-    if st.button("Save this job to application tracker", width="stretch"):
-        created, message = save_current_job_to_tracker(
-            report,
-            "Tailored" if st.session_state.optimized_resume else "Original",
-        )
-        (st.success if created else st.info)(message)
+def _compact_status(status: MatchStatus) -> tuple[str, str]:
+    return {
+        MatchStatus.DIRECT: ("Direct match", "green"),
+        MatchStatus.RELATED: ("Related evidence", "blue"),
+        MatchStatus.UNCERTAIN: ("Needs verification", "amber"),
+        MatchStatus.MISSING: ("Missing evidence", "rose"),
+    }[status]
 
-    st.subheader("Requirement Summary")
+
+def _render_report_overview(report: MatchReport) -> None:
     counts = Counter(item.status for item in report.matches)
-    summary_cols = st.columns(4)
-    summary_cols[0].metric("Direct Matches", counts[MatchStatus.DIRECT])
-    summary_cols[1].metric("Related Evidence", counts[MatchStatus.RELATED])
-    summary_cols[2].metric("Uncertain", counts[MatchStatus.UNCERTAIN])
-    summary_cols[3].metric("Missing", counts[MatchStatus.MISSING])
-    coverage_cols = st.columns(2)
-    coverage_cols[0].metric(
+    metrics = st.columns(4)
+    metrics[0].metric("Direct matches", counts[MatchStatus.DIRECT])
+    metrics[1].metric("Related evidence", counts[MatchStatus.RELATED])
+    metrics[2].metric(
+        "Needs attention",
+        counts[MatchStatus.UNCERTAIN] + counts[MatchStatus.MISSING],
+    )
+    metrics[3].metric(
         "Required alignment",
         f"{report.required_score}%" if report.required_score is not None else "Not stated",
     )
-    coverage_cols[1].metric(
-        "Preferred alignment",
-        f"{report.preferred_score}%" if report.preferred_score is not None else "Not stated",
-    )
 
-    st.subheader("Match by Category")
+    st.subheader("Match by category")
     category_columns = st.columns(3)
     for index, item in enumerate(report.category_scores):
         with category_columns[index % 3]:
@@ -2894,98 +2884,196 @@ def render_report(settings: Settings, use_ai: bool) -> None:
                 unsafe_allow_html=True,
             )
 
-    st.subheader("Requirement Evidence Map")
-    st.caption("Every job requirement is evaluated independently against evidence retrieved from the résumé.")
-    filter_col, category_col, importance_col = st.columns(3)
-    selected_statuses = filter_col.multiselect(
-        "Status",
-        list(MatchStatus),
-        default=list(MatchStatus),
-        format_func=_status_label,
-    )
-    selected_categories = category_col.multiselect(
-        "Category",
-        [item.category for item in report.category_scores],
-        default=[item.category for item in report.category_scores],
-        format_func=_category_label,
-    )
-    selected_importance = importance_col.multiselect(
-        "Importance",
-        list(Importance),
-        default=list(Importance),
-        format_func=lambda item: item.value.title(),
-    )
-    filtered = [
-        item
-        for item in report.matches
-        if item.status in selected_statuses
-        and item.requirement.category in selected_categories
-        and item.requirement.importance in selected_importance
-    ]
-    for position, item in enumerate(filtered, start=1):
-        expanded = item.status != MatchStatus.DIRECT
-        with st.expander(
-            f"{position}. {item.requirement.text} — {_status_label(item.status)}",
-            expanded=expanded,
-        ):
-            meta = st.columns(3)
-            meta[0].write(f"**Category**\n\n{_category_label(item.requirement.category)}")
-            meta[1].write(f"**Importance**\n\n{item.requirement.importance.value.title()}")
-            meta[2].write(f"**AI Confidence**\n\n{item.confidence * 100:.0f}%")
-            st.write("**Assessment**")
-            st.write(item.assessment)
-            st.write("**Résumé Evidence**")
-            if item.evidence:
-                st.info(item.evidence.text)
-                st.caption(f"Evidence source: {item.evidence.source}")
-            else:
-                st.warning("No sufficiently specific supporting résumé evidence was verified.")
+    recommendations = build_improvement_recommendations(report)
+    st.subheader("Next best actions")
+    if not recommendations:
+        st.success("Every extracted requirement already has direct résumé evidence.")
+        return
+    focus_items = recommendations[:3]
+    focus_columns = st.columns(len(focus_items))
+    for index, (column, suggestion) in enumerate(zip(focus_columns, focus_items), start=1):
+        action_type = "Verify first" if suggestion.requires_verification else "Clarify evidence"
+        tone = "verify" if suggestion.requires_verification else "clarify"
+        with column:
+            st.markdown(
+                f"""
+                <div class="hs-focus-card {tone}">
+                  <div class="hs-focus-index">Priority {index} · {html.escape(suggestion.priority)}</div>
+                  <strong>{html.escape(_short_ui_text(suggestion.requirement, 105))}</strong>
+                  <div class="hs-focus-footer">
+                    <span class="hs-focus-type">{action_type}</span>
+                    <span>up to +{suggestion.potential_points:.1f}</span>
+                  </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+    st.caption("Open Priority gaps for the action plan, or Evidence explorer to inspect any requirement.")
 
-    st.subheader("Recruiter-focused score improvement plan")
+
+def _render_priority_gaps(candidate: CandidateProfile, report: MatchReport) -> None:
     recommendations = build_improvement_recommendations(report)
     ceiling = related_clarity_ceiling(report)
-    verify_count = sum(item.requires_verification for item in recommendations)
-    improvement_metrics = st.columns(3)
-    improvement_metrics[0].metric("Current score", f"{report.score}%")
-    improvement_metrics[1].metric(
+    quick_wins = [item for item in recommendations if not item.requires_verification]
+    verify_first = [item for item in recommendations if item.requires_verification]
+    metrics = st.columns(3)
+    metrics[0].metric("Current score", f"{report.score}%")
+    metrics[1].metric(
         "Clarity opportunity",
         f"Up to {ceiling}%",
         delta=f"+{max(0, ceiling - report.score)}",
-        help="A conservative what-if calculation that upgrades only related rows already backed by résumé evidence.",
+        help="A conservative what-if calculation using only related rows already backed by résumé evidence.",
     )
-    improvement_metrics[2].metric("Verify before adding", verify_count)
-    st.caption(
-        "The clarity opportunity is not a guaranteed recruiter or ATS outcome. It shows where existing evidence could "
-        "be stated more explicitly; missing experience is never added automatically."
+    metrics[2].metric("Verify before adding", len(verify_first))
+
+    st.markdown(
+        f"""
+        <div class="hs-compact-banner">
+          <div><strong>{len(quick_wins)} quick win{'s' if len(quick_wins) != 1 else ''}</strong><br>
+          <span>Clarify evidence that already exists in the résumé.</span></div>
+          <div><strong>{len(verify_first)} item{'s' if len(verify_first) != 1 else ''} to verify</strong><br>
+          <span>Never add these merely as keywords.</span></div>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
+
     keywords = supported_keywords(candidate, report)
     if keywords:
-        st.write("**Supported keywords to emphasize:** " + " · ".join(keywords[:18]))
-    if not recommendations:
-        st.success("Every extracted requirement already has direct résumé evidence.")
-    else:
-        priority_filter = st.multiselect(
-            "Recommendation priority",
-            ["Critical", "High", "Medium", "Low"],
-            default=["Critical", "High", "Medium", "Low"],
+        st.markdown("**Supported keywords to emphasize**")
+        st.markdown(
+            '<div class="hs-keywords">'
+            + "".join(f"<span>{html.escape(keyword)}</span>" for keyword in keywords[:12])
+            + "</div>",
+            unsafe_allow_html=True,
         )
-        visible_recommendations = [item for item in recommendations if item.priority in priority_filter]
-        for index, suggestion in enumerate(visible_recommendations, start=1):
-            verification = "Verify first" if suggestion.requires_verification else "Existing evidence"
-            with st.expander(
-                f"{index}. {suggestion.priority} · {suggestion.requirement} · potential +{suggestion.potential_points:.1f}",
-                expanded=suggestion.priority in {"Critical", "High"},
-            ):
-                st.write(f"**Recommended action:** {suggestion.action}")
-                st.write(f"**Why:** {suggestion.rationale}")
-                st.caption(f"{verification} · Requirement {suggestion.requirement_id}")
-                if suggestion.current_evidence:
-                    st.info(suggestion.current_evidence)
 
-    st.subheader("Generate a tailored résumé")
+    if not recommendations:
+        st.success("No improvement actions are needed for the extracted requirements.")
+        return
+
+    show_all = st.toggle(
+        "Show every recommendation",
+        value=False,
+        key="show_all_improvement_recommendations",
+    )
+    visible = recommendations if show_all else recommendations[:5]
+    st.markdown(
+        f'<div class="hs-results-note">Showing {len(visible)} of {len(recommendations)} prioritized actions.</div>',
+        unsafe_allow_html=True,
+    )
+    for index, suggestion in enumerate(visible, start=1):
+        action_type = "Verify" if suggestion.requires_verification else "Clarify"
+        title = (
+            f"{index}. {suggestion.priority} · {action_type} · "
+            f"{_short_ui_text(suggestion.requirement, 105)}"
+        )
+        with st.expander(title, expanded=False):
+            tone = "amber" if suggestion.requires_verification else "blue"
+            st.markdown(
+                f"""
+                <div class="hs-meta-row">
+                  <span class="hs-meta-pill {tone}">{action_type}</span>
+                  <span class="hs-meta-pill">{html.escape(suggestion.priority)} priority</span>
+                  <span class="hs-meta-pill">Potential +{suggestion.potential_points:.1f}</span>
+                  <span class="hs-meta-pill">{html.escape(suggestion.requirement_id)}</span>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+            st.write(f"**Action:** {suggestion.action}")
+            st.caption(suggestion.rationale)
+            if suggestion.current_evidence:
+                st.markdown(
+                    f'<div class="hs-evidence-quote">{html.escape(suggestion.current_evidence)}</div>',
+                    unsafe_allow_html=True,
+                )
+    if not show_all and len(recommendations) > len(visible):
+        st.caption(f"Turn on Show every recommendation to review the remaining {len(recommendations) - len(visible)} items.")
+
+
+def _render_evidence_explorer(report: MatchReport) -> None:
+    st.write("Filter the evidence map, then open only the requirements you want to inspect.")
+    controls = st.columns([1.15, 1, 1])
+    view_mode = controls[0].radio(
+        "Focus",
+        ["Needs attention", "All requirements", "Direct matches"],
+        horizontal=True,
+        key="evidence_view_mode",
+    )
+    category_values = [item.category.value for item in report.category_scores]
+    category_filter = controls[1].selectbox(
+        "Category",
+        ["All categories"] + category_values,
+        format_func=lambda value: value if value == "All categories" else _category_label(Category(value)),
+        key="evidence_category_filter",
+    )
+    importance_filter = controls[2].selectbox(
+        "Importance",
+        ["All", "Required", "Preferred"],
+        key="evidence_importance_filter",
+    )
+
+    if view_mode == "Needs attention":
+        matches = [item for item in report.matches if item.status != MatchStatus.DIRECT]
+    elif view_mode == "Direct matches":
+        matches = [item for item in report.matches if item.status == MatchStatus.DIRECT]
+    else:
+        matches = list(report.matches)
+    if category_filter != "All categories":
+        matches = [item for item in matches if item.requirement.category.value == category_filter]
+    if importance_filter != "All":
+        selected_importance = Importance(importance_filter.casefold())
+        matches = [item for item in matches if item.requirement.importance == selected_importance]
+
+    show_all = st.toggle("Show all matching requirements", value=False, key="show_all_evidence_rows")
+    visible = matches if show_all else matches[:8]
+    st.markdown(
+        f'<div class="hs-results-note">Showing {len(visible)} of {len(matches)} matching requirements.</div>',
+        unsafe_allow_html=True,
+    )
+    if not matches:
+        st.info("No requirements match the selected filters.")
+        return
+
+    for index, item in enumerate(visible, start=1):
+        status_label, tone = _compact_status(item.status)
+        title = f"{status_label} · {_short_ui_text(item.requirement.text, 122)}"
+        with st.expander(title, expanded=False):
+            st.markdown(
+                f"""
+                <div class="hs-meta-row">
+                  <span class="hs-meta-pill {tone}">{status_label}</span>
+                  <span class="hs-meta-pill">{html.escape(_category_label(item.requirement.category))}</span>
+                  <span class="hs-meta-pill">{html.escape(item.requirement.importance.value.title())}</span>
+                  <span class="hs-meta-pill">{item.confidence * 100:.0f}% confidence</span>
+                  <span class="hs-meta-pill">{html.escape(item.requirement.requirement_id)}</span>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+            st.write(item.assessment)
+            if item.evidence:
+                st.markdown(
+                    f'<div class="hs-evidence-quote">{html.escape(item.evidence.text)}</div>',
+                    unsafe_allow_html=True,
+                )
+                st.caption(f"Evidence source: {item.evidence.source}")
+            else:
+                st.caption("No verified résumé excerpt was returned for this requirement.")
+    if not show_all and len(matches) > len(visible):
+        st.caption(f"Turn on Show all matching requirements to review the remaining {len(matches) - len(visible)} rows.")
+
+
+def _render_tailor_and_exports(
+    settings: Settings,
+    use_ai: bool,
+    candidate: CandidateProfile,
+    report: MatchReport,
+) -> None:
+    st.subheader("Create a tailored résumé")
     st.write(
-        "HireSense will improve recruiter readability, prioritize supported keywords, and refine evidence-backed "
-        "bullets. It will not add requirements marked uncertain or missing."
+        "Improve recruiter readability and supported keyword placement without adding uncertain or missing experience."
     )
     consent = st.checkbox(
         "I consent to generate a tailored résumé and understand that I must review it before applying.",
@@ -2994,8 +3082,8 @@ def render_report(settings: Settings, use_ai: bool) -> None:
     if consent and st.button("Generate tailored résumé", type="primary", width="stretch"):
         with st.status("Tailoring the résumé from verified evidence…", expanded=True) as status:
             st.write("Prioritizing recruiter-relevant supported keywords")
-            st.write("Improving summary and evidence-backed bullets")
-            st.write("Checking numbers, named tools, frameworks, and certifications")
+            st.write("Improving the summary and evidence-backed bullets")
+            st.write("Validating numbers, named tools, frameworks, and certifications")
             optimized = optimize_resume_content(
                 candidate,
                 report,
@@ -3055,9 +3143,10 @@ def render_report(settings: Settings, use_ai: bool) -> None:
         if st.button("Save tailored application to tracker", key="save_tailored_to_tracker", width="stretch"):
             created, message = save_current_job_to_tracker(report, "Tailored")
             (st.success if created else st.info)(message)
-        st.warning("Review the preview carefully. HireSense improves wording but cannot independently verify facts not stated in your résumé.")
+        st.warning("Review the preview carefully. HireSense improves wording but cannot verify facts not stated in your résumé.")
 
-    st.subheader("Download report")
+    st.divider()
+    st.subheader("Download the analysis")
     export_cols = st.columns(2)
     export_cols[0].download_button(
         "Download evidence map · CSV",
@@ -3078,6 +3167,73 @@ def render_report(settings: Settings, use_ai: bool) -> None:
             mime="application/pdf",
             width="stretch",
         )
+
+
+def render_report(settings: Settings, use_ai: bool) -> None:
+    report: MatchReport | None = st.session_state.report
+    candidate: CandidateProfile | None = st.session_state.candidate
+    parsed: ParsedResume | None = st.session_state.parsed_resume
+    if not report or not candidate or not parsed:
+        return
+
+    st.divider()
+    st.markdown('<div class="hs-report-kicker">Explainable match dashboard</div>', unsafe_allow_html=True)
+    st.header("HireSense Match Report")
+    job_line = " · ".join(
+        value
+        for value in (
+            st.session_state.job_title,
+            st.session_state.company,
+            st.session_state.job_location,
+        )
+        if value
+    )
+    if job_line:
+        st.caption(job_line)
+    st.markdown(
+        f"""
+        <div class="hs-score-panel">
+          <div class="hs-score-ring" style="--score:{report.score}"><div><strong>{report.score}%</strong><span>match</span></div></div>
+          <div class="hs-score-copy">
+            <span>Overall résumé-to-job alignment</span>
+            <h3>{html.escape(report.alignment)}</h3>
+            <p>Built from independently assessed job requirements and the exact résumé evidence supporting each result.</p>
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        f"""
+        <div class="hs-compact-banner">
+          <div><strong>{html.escape(parsed.filename)}</strong><br><span>{parsed.word_count:,} words · {len(report.matches)} requirements</span></div>
+          <div><strong>{html.escape(report.mode)}</strong><br><span>Evidence-grounded assessment</span></div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    if report.warnings:
+        with st.expander(f"Analysis notes · {len(report.warnings)}", expanded=False):
+            for warning in report.warnings:
+                st.warning(warning)
+
+    overview_tab, gaps_tab, evidence_tab, tailor_tab = st.tabs(
+        ["Overview", "Priority gaps", "Evidence explorer", "Tailor & export"]
+    )
+    with overview_tab:
+        if st.button("Save this job to application tracker", type="secondary", width="stretch"):
+            created, message = save_current_job_to_tracker(
+                report,
+                "Tailored" if st.session_state.optimized_resume else "Original",
+            )
+            (st.success if created else st.info)(message)
+        _render_report_overview(report)
+    with gaps_tab:
+        _render_priority_gaps(candidate, report)
+    with evidence_tab:
+        _render_evidence_explorer(report)
+    with tailor_tab:
+        _render_tailor_and_exports(settings, use_ai, candidate, report)
 
 
 def render_discover() -> None:
