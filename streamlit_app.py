@@ -1602,7 +1602,7 @@ def optimized_resume_sections(
     if optimized.professional_summary:
         output.append(("Professional Summary", [optimized.professional_summary]))
     if optimized.skills:
-        output.append(("Core Skills & Tools", [" • ".join(optimized.skills)]))
+        output.append(("Core Skills & Tools", [" | ".join(optimized.skills)]))
     for section, lines in original_sections:
         if section in {"Header", "Professional Summary", "Skills", "Tools"}:
             continue
@@ -1812,72 +1812,238 @@ def safe_resume_stem(candidate: CandidateProfile, job_title: str) -> str:
 def improved_resume_docx(candidate: CandidateProfile, optimized: OptimizedResume) -> bytes:
     try:
         from docx import Document
+        from docx.enum.style import WD_STYLE_TYPE
         from docx.enum.text import WD_ALIGN_PARAGRAPH
+        from docx.oxml import OxmlElement
+        from docx.oxml.ns import qn
         from docx.shared import Inches, Pt, RGBColor
     except ImportError as exc:
         raise RuntimeError("Word export requires python-docx: pip install python-docx") from exc
+
+    navy = RGBColor(15, 35, 68)
+    blue = RGBColor(37, 99, 235)
+    ink = RGBColor(31, 41, 55)
+    muted = RGBColor(71, 85, 105)
+    rule_color = "CBD5E1"
+
+    def set_run_font(run: Any, size: float, color: Any = ink, bold: bool = False) -> None:
+        run.font.name = "Arial"
+        run.font.size = Pt(size)
+        run.font.color.rgb = color
+        run.bold = bold
+        fonts = run._element.get_or_add_rPr().get_or_add_rFonts()
+        for attribute in ("ascii", "hAnsi", "eastAsia", "cs"):
+            fonts.set(qn(f"w:{attribute}"), "Arial")
+
+    def paragraph_style(
+        name: str,
+        *,
+        size: float,
+        color: Any = ink,
+        bold: bool = False,
+        before: float = 0,
+        after: float = 0,
+        line_spacing: float = 1.08,
+        keep_with_next: bool = False,
+    ) -> Any:
+        style = document.styles.add_style(name, WD_STYLE_TYPE.PARAGRAPH)
+        style.font.name = "Arial"
+        style.font.size = Pt(size)
+        style.font.color.rgb = color
+        style.font.bold = bold
+        fonts = style._element.get_or_add_rPr().get_or_add_rFonts()
+        for attribute in ("ascii", "hAnsi", "eastAsia", "cs"):
+            fonts.set(qn(f"w:{attribute}"), "Arial")
+        fmt = style.paragraph_format
+        fmt.space_before = Pt(before)
+        fmt.space_after = Pt(after)
+        fmt.line_spacing = line_spacing
+        fmt.keep_with_next = keep_with_next
+        fmt.widow_control = True
+        return style
+
+    def add_bottom_rule(style: Any) -> None:
+        p_pr = style._element.get_or_add_pPr()
+        borders = p_pr.find(qn("w:pBdr"))
+        if borders is None:
+            borders = OxmlElement("w:pBdr")
+            p_pr.append(borders)
+        bottom = OxmlElement("w:bottom")
+        bottom.set(qn("w:val"), "single")
+        bottom.set(qn("w:sz"), "6")
+        bottom.set(qn("w:space"), "3")
+        bottom.set(qn("w:color"), rule_color)
+        borders.append(bottom)
+
+    def create_bullet_numbering() -> int:
+        numbering = document.part.numbering_part.element
+        abstract_ids = [
+            int(node.get(qn("w:abstractNumId")))
+            for node in numbering.findall(qn("w:abstractNum"))
+        ]
+        num_ids = [int(node.get(qn("w:numId"))) for node in numbering.findall(qn("w:num"))]
+        abstract_id = max(abstract_ids, default=-1) + 1
+        num_id = max(num_ids, default=0) + 1
+
+        abstract = OxmlElement("w:abstractNum")
+        abstract.set(qn("w:abstractNumId"), str(abstract_id))
+        multi = OxmlElement("w:multiLevelType")
+        multi.set(qn("w:val"), "singleLevel")
+        abstract.append(multi)
+        level = OxmlElement("w:lvl")
+        level.set(qn("w:ilvl"), "0")
+        for tag, value in (("w:start", "1"), ("w:numFmt", "bullet"), ("w:lvlText", "•"), ("w:lvlJc", "left")):
+            node = OxmlElement(tag)
+            node.set(qn("w:val"), value)
+            level.append(node)
+        p_pr = OxmlElement("w:pPr")
+        tabs = OxmlElement("w:tabs")
+        tab = OxmlElement("w:tab")
+        tab.set(qn("w:val"), "num")
+        tab.set(qn("w:pos"), "540")
+        tabs.append(tab)
+        indent = OxmlElement("w:ind")
+        indent.set(qn("w:left"), "540")
+        indent.set(qn("w:hanging"), "270")
+        p_pr.extend([tabs, indent])
+        level.append(p_pr)
+        r_pr = OxmlElement("w:rPr")
+        r_fonts = OxmlElement("w:rFonts")
+        r_fonts.set(qn("w:ascii"), "Arial")
+        r_fonts.set(qn("w:hAnsi"), "Arial")
+        r_pr.append(r_fonts)
+        level.append(r_pr)
+        abstract.append(level)
+        numbering.append(abstract)
+
+        num = OxmlElement("w:num")
+        num.set(qn("w:numId"), str(num_id))
+        abstract_ref = OxmlElement("w:abstractNumId")
+        abstract_ref.set(qn("w:val"), str(abstract_id))
+        num.append(abstract_ref)
+        numbering.append(num)
+        return num_id
+
+    def apply_bullet(paragraph: Any, num_id: int) -> None:
+        p_pr = paragraph._p.get_or_add_pPr()
+        num_pr = OxmlElement("w:numPr")
+        level = OxmlElement("w:ilvl")
+        level.set(qn("w:val"), "0")
+        number = OxmlElement("w:numId")
+        number.set(qn("w:val"), str(num_id))
+        num_pr.extend([level, number])
+        p_pr.append(num_pr)
+
+    def add_page_field(paragraph: Any) -> None:
+        field = OxmlElement("w:fldSimple")
+        field.set(qn("w:instr"), "PAGE")
+        run = OxmlElement("w:r")
+        run_properties = OxmlElement("w:rPr")
+        fonts = OxmlElement("w:rFonts")
+        fonts.set(qn("w:ascii"), "Arial")
+        fonts.set(qn("w:hAnsi"), "Arial")
+        size = OxmlElement("w:sz")
+        size.set(qn("w:val"), "16")
+        color = OxmlElement("w:color")
+        color.set(qn("w:val"), "64748B")
+        run_properties.extend([fonts, size, color])
+        text = OxmlElement("w:t")
+        text.text = "1"
+        run.extend([run_properties, text])
+        field.append(run)
+        paragraph._p.append(field)
+
     document = Document()
     section = document.sections[0]
-    section.top_margin = Inches(0.55)
-    section.bottom_margin = Inches(0.55)
-    section.left_margin = Inches(0.65)
-    section.right_margin = Inches(0.65)
+    section.page_width = Inches(8.5)
+    section.page_height = Inches(11)
+    # Resume-specific compact override to the compact_reference_guide preset.
+    section.top_margin = Inches(0.62)
+    section.bottom_margin = Inches(0.62)
+    section.left_margin = Inches(0.7)
+    section.right_margin = Inches(0.7)
+    section.header_distance = Inches(0.3)
+    section.footer_distance = Inches(0.3)
+
     normal = document.styles["Normal"]
     normal.font.name = "Arial"
-    normal.font.size = Pt(9.5)
-    normal.paragraph_format.space_after = Pt(3)
+    normal.font.size = Pt(9.7)
+    normal.font.color.rgb = ink
+    normal_fonts = normal._element.get_or_add_rPr().get_or_add_rFonts()
+    for attribute in ("ascii", "hAnsi", "eastAsia", "cs"):
+        normal_fonts.set(qn(f"w:{attribute}"), "Arial")
+    normal.paragraph_format.space_before = Pt(0)
+    normal.paragraph_format.space_after = Pt(2.5)
+    normal.paragraph_format.line_spacing = 1.08
+    normal.paragraph_format.widow_control = True
+
+    section_style = paragraph_style(
+        "Resume Section", size=10.5, color=navy, bold=True, before=8, after=4, keep_with_next=True
+    )
+    add_bottom_rule(section_style)
+    paragraph_style("Resume Body", size=9.7, after=2.5, line_spacing=1.08)
+    paragraph_style(
+        "Resume Role", size=9.8, color=navy, bold=True, before=4.5, after=1.5, keep_with_next=True
+    )
+    bullet_style = paragraph_style("Resume Bullet", size=9.45, after=1.8, line_spacing=1.07)
+    bullet_style.paragraph_format.left_indent = Inches(0.375)
+    bullet_style.paragraph_format.first_line_indent = Inches(-0.188)
+    bullet_style.paragraph_format.keep_together = True
+    paragraph_style("Resume Skills", size=9.35, after=2, line_spacing=1.08)
+    bullet_num_id = create_bullet_numbering()
 
     name = document.add_paragraph()
     name.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    name.paragraph_format.space_after = Pt(2)
+    name.paragraph_format.space_after = Pt(1.5)
+    name.paragraph_format.keep_with_next = True
     run = name.add_run(candidate.candidate_name)
-    run.bold = True
-    run.font.name = "Arial"
-    run.font.size = Pt(18)
-    run.font.color.rgb = RGBColor(23, 37, 84)
+    set_run_font(run, 20, navy, True)
 
     header, sections = optimized_resume_sections(candidate, optimized)
     remaining_header = [clean_line(line) for line in header if clean_line(line) != candidate.candidate_name]
     if remaining_header:
         contact = document.add_paragraph(" | ".join(remaining_header))
         contact.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        contact.paragraph_format.space_after = Pt(3)
+        contact.paragraph_format.space_after = Pt(2.5)
+        contact.paragraph_format.line_spacing = 1.0
+        contact.paragraph_format.keep_with_next = True
         for contact_run in contact.runs:
-            contact_run.font.size = Pt(8.5)
-            contact_run.font.color.rgb = RGBColor(71, 85, 105)
+            set_run_font(contact_run, 8.4, muted)
     if optimized.headline:
         headline = document.add_paragraph(optimized.headline)
         headline.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        headline.paragraph_format.space_after = Pt(8)
-        headline.runs[0].bold = True
-        headline.runs[0].font.size = Pt(10.5)
-        headline.runs[0].font.color.rgb = RGBColor(37, 99, 235)
+        headline.paragraph_format.space_after = Pt(7)
+        headline.paragraph_format.keep_with_next = True
+        set_run_font(headline.runs[0], 10.4, blue, True)
 
     for section_name, lines in sections:
-        heading = document.add_paragraph()
-        heading.paragraph_format.space_before = Pt(7)
-        heading.paragraph_format.space_after = Pt(3)
-        heading.paragraph_format.keep_with_next = True
-        heading_run = heading.add_run(section_name.upper())
-        heading_run.bold = True
-        heading_run.font.name = "Arial"
-        heading_run.font.size = Pt(10.5)
-        heading_run.font.color.rgb = RGBColor(29, 78, 216)
+        heading = document.add_paragraph(style="Resume Section")
+        heading.add_run(section_name.upper())
         for line in lines:
             if section_name in {"Experience", "Projects"} and not _is_resume_context_line(line):
-                paragraph = document.add_paragraph(style="List Bullet")
-                paragraph.paragraph_format.left_indent = Inches(0.18)
-                paragraph.paragraph_format.first_line_indent = Inches(-0.12)
+                paragraph = document.add_paragraph(style="Resume Bullet")
+                apply_bullet(paragraph, bullet_num_id)
                 paragraph.add_run(line)
             else:
-                paragraph = document.add_paragraph(line)
                 if section_name in {"Experience", "Projects"} and _is_resume_context_line(line):
-                    paragraph.runs[0].bold = True
-                    paragraph.paragraph_format.space_before = Pt(4)
-                    paragraph.paragraph_format.keep_with_next = True
+                    paragraph = document.add_paragraph(line, style="Resume Role")
+                elif section_name == "Core Skills & Tools":
+                    paragraph = document.add_paragraph(line, style="Resume Skills")
+                else:
+                    paragraph = document.add_paragraph(line, style="Resume Body")
+
+    footer = section.footer.paragraphs[0]
+    footer.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+    footer.paragraph_format.space_before = Pt(0)
+    footer.paragraph_format.space_after = Pt(0)
+    footer.paragraph_format.line_spacing = 1.0
+    footer_run = footer.add_run(f"{candidate.candidate_name}  |  Page ")
+    set_run_font(footer_run, 8, muted)
+    add_page_field(footer)
 
     document.core_properties.title = f"{candidate.candidate_name} - Tailored Resume"
     document.core_properties.subject = "Evidence-grounded tailored resume generated by HireSense"
+    document.core_properties.author = candidate.candidate_name
     output = io.BytesIO()
     document.save(output)
     return output.getvalue()
@@ -1885,70 +2051,94 @@ def improved_resume_docx(candidate: CandidateProfile, optimized: OptimizedResume
 
 def improved_resume_pdf(candidate: CandidateProfile, optimized: OptimizedResume) -> bytes:
     try:
+        import reportlab
         from reportlab.lib import colors
-        from reportlab.lib.enums import TA_CENTER
+        from reportlab.lib.enums import TA_CENTER, TA_LEFT
         from reportlab.lib.pagesizes import letter
         from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
         from reportlab.lib.units import inch
-        from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
+        from reportlab.pdfbase import pdfmetrics
+        from reportlab.pdfbase.ttfonts import TTFont
+        from reportlab.platypus import HRFlowable, KeepTogether, Paragraph, SimpleDocTemplate, Spacer
     except ImportError as exc:
         raise RuntimeError("PDF export requires reportlab: pip install reportlab") from exc
+
+    # Embed ReportLab's bundled TrueType font so spacing and alignment remain
+    # identical in browsers, Preview, Acrobat, and applicant-tracking systems.
+    font_directory = os.path.join(os.path.dirname(reportlab.__file__), "fonts")
+    regular_font = "HireSenseSans"
+    bold_font = "HireSenseSans-Bold"
+    pdfmetrics.registerFont(TTFont(regular_font, os.path.join(font_directory, "Vera.ttf")))
+    pdfmetrics.registerFont(TTFont(bold_font, os.path.join(font_directory, "VeraBd.ttf")))
+
+    navy = colors.HexColor("#0F2344")
+    blue = colors.HexColor("#2563EB")
+    ink = colors.HexColor("#1F2937")
+    muted = colors.HexColor("#475569")
+    rule = colors.HexColor("#CBD5E1")
     output = io.BytesIO()
     document = SimpleDocTemplate(
         output,
         pagesize=letter,
-        rightMargin=0.62 * inch,
-        leftMargin=0.62 * inch,
-        topMargin=0.52 * inch,
-        bottomMargin=0.52 * inch,
+        rightMargin=0.55 * inch,
+        leftMargin=0.55 * inch,
+        topMargin=0.45 * inch,
+        bottomMargin=0.50 * inch,
         title=f"{candidate.candidate_name} - Tailored Resume",
+        author=candidate.candidate_name,
+        subject="Evidence-grounded tailored resume generated by HireSense",
+        allowSplitting=1,
     )
     styles = getSampleStyleSheet()
     styles.add(
         ParagraphStyle(
             name="ResumeName",
             parent=styles["Title"],
-            fontName="Helvetica-Bold",
-            fontSize=17,
-            leading=20,
+            fontName=bold_font,
+            fontSize=20,
+            leading=22,
             alignment=TA_CENTER,
-            textColor=colors.HexColor("#172554"),
-            spaceAfter=2,
+            textColor=navy,
+            spaceAfter=1.5,
+            keepWithNext=True,
         )
     )
     styles.add(
         ParagraphStyle(
             name="ResumeContact",
             parent=styles["BodyText"],
-            fontSize=8,
-            leading=10,
+            fontName=regular_font,
+            fontSize=7.9,
+            leading=9.2,
             alignment=TA_CENTER,
-            textColor=colors.HexColor("#475569"),
-            spaceAfter=3,
+            textColor=muted,
+            spaceAfter=2.5,
+            keepWithNext=True,
         )
     )
     styles.add(
         ParagraphStyle(
             name="ResumeHeadline",
             parent=styles["BodyText"],
-            fontName="Helvetica-Bold",
-            fontSize=10,
-            leading=12,
+            fontName=bold_font,
+            fontSize=9.7,
+            leading=11.2,
             alignment=TA_CENTER,
-            textColor=colors.HexColor("#1D4ED8"),
+            textColor=blue,
             spaceAfter=7,
+            keepWithNext=True,
         )
     )
     styles.add(
         ParagraphStyle(
             name="ResumeSection",
             parent=styles["Heading2"],
-            fontName="Helvetica-Bold",
+            fontName=bold_font,
             fontSize=10,
-            leading=12,
-            textColor=colors.HexColor("#1D4ED8"),
-            spaceBefore=7,
-            spaceAfter=3,
+            leading=11.2,
+            textColor=navy,
+            spaceBefore=5.5,
+            spaceAfter=1.5,
             keepWithNext=True,
         )
     )
@@ -1956,20 +2146,25 @@ def improved_resume_pdf(candidate: CandidateProfile, optimized: OptimizedResume)
         ParagraphStyle(
             name="ResumeBody",
             parent=styles["BodyText"],
-            fontSize=8.8,
-            leading=11.2,
-            spaceAfter=3,
+            fontName=regular_font,
+            fontSize=8.7,
+            leading=9.9,
+            textColor=ink,
+            alignment=TA_LEFT,
+            spaceAfter=1.8,
+            splitLongWords=True,
         )
     )
     styles.add(
         ParagraphStyle(
             name="ResumeRole",
             parent=styles["BodyText"],
-            fontName="Helvetica-Bold",
-            fontSize=9,
-            leading=11,
-            spaceBefore=3,
-            spaceAfter=2,
+            fontName=bold_font,
+            fontSize=8.85,
+            leading=10.1,
+            textColor=navy,
+            spaceBefore=3.2,
+            spaceAfter=1,
             keepWithNext=True,
         )
     )
@@ -1977,14 +2172,56 @@ def improved_resume_pdf(candidate: CandidateProfile, optimized: OptimizedResume)
         ParagraphStyle(
             name="ResumeBullet",
             parent=styles["BodyText"],
-            fontSize=8.8,
-            leading=11.2,
-            leftIndent=11,
-            firstLineIndent=-7,
-            bulletIndent=3,
-            spaceAfter=2,
+            fontName=regular_font,
+            fontSize=8.55,
+            leading=9.8,
+            textColor=ink,
+            leftIndent=27,
+            firstLineIndent=0,
+            bulletIndent=13.5,
+            bulletFontName=regular_font,
+            bulletFontSize=7.8,
+            spaceAfter=1.1,
+            splitLongWords=True,
         )
     )
+    styles.add(
+        ParagraphStyle(
+            name="ResumeSkills",
+            parent=styles["BodyText"],
+            fontName=regular_font,
+            fontSize=8.6,
+            leading=9.9,
+            textColor=ink,
+            spaceAfter=1.5,
+            splitLongWords=True,
+        )
+    )
+
+    def line_flowable(section_name: str, line: str) -> Any:
+        escaped = html.escape(line)
+        if section_name in {"Experience", "Projects"} and not _is_resume_context_line(line):
+            return Paragraph(escaped, styles["ResumeBullet"], bulletText="•")
+        if section_name in {"Experience", "Projects"}:
+            return Paragraph(escaped, styles["ResumeRole"])
+        if section_name == "Core Skills & Tools":
+            return Paragraph(escaped, styles["ResumeSkills"])
+        return Paragraph(escaped, styles["ResumeBody"])
+
+    def draw_footer(canvas: Any, doc: Any) -> None:
+        canvas.saveState()
+        canvas.setStrokeColor(rule)
+        canvas.setLineWidth(0.45)
+        canvas.line(doc.leftMargin, 0.36 * inch, letter[0] - doc.rightMargin, 0.36 * inch)
+        canvas.setFillColor(muted)
+        canvas.setFont(regular_font, 7.8)
+        canvas.drawRightString(
+            letter[0] - doc.rightMargin,
+            0.22 * inch,
+            f"{candidate.candidate_name}  |  Page {canvas.getPageNumber()}",
+        )
+        canvas.restoreState()
+
     story: list[Any] = [Paragraph(html.escape(candidate.candidate_name), styles["ResumeName"])]
     header, sections = optimized_resume_sections(candidate, optimized)
     remaining_header = [clean_line(line) for line in header if clean_line(line) != candidate.candidate_name]
@@ -1993,17 +2230,36 @@ def improved_resume_pdf(candidate: CandidateProfile, optimized: OptimizedResume)
     if optimized.headline:
         story.append(Paragraph(html.escape(optimized.headline), styles["ResumeHeadline"]))
     for section_name, lines in sections:
-        story.append(Paragraph(html.escape(section_name.upper()), styles["ResumeSection"]))
-        for line in lines:
-            escaped = html.escape(line)
-            if section_name in {"Experience", "Projects"} and not _is_resume_context_line(line):
-                story.append(Paragraph(f"&bull; {escaped}", styles["ResumeBullet"]))
-            elif section_name in {"Experience", "Projects"}:
-                story.append(Paragraph(escaped, styles["ResumeRole"]))
+        section_header: list[Any] = [
+            Paragraph(html.escape(section_name.upper()), styles["ResumeSection"]),
+            HRFlowable(width="100%", thickness=0.6, color=rule, spaceBefore=0, spaceAfter=3),
+        ]
+        flowable_groups: list[list[Any]] = []
+        position = 0
+        while position < len(lines):
+            line = lines[position]
+            if (
+                section_name in {"Experience", "Projects"}
+                and _is_resume_context_line(line)
+                and position + 1 < len(lines)
+                and not _is_resume_context_line(lines[position + 1])
+            ):
+                flowable_groups.append(
+                    [line_flowable(section_name, line), line_flowable(section_name, lines[position + 1])]
+                )
+                position += 2
             else:
-                story.append(Paragraph(escaped, styles["ResumeBody"]))
-        story.append(Spacer(1, 1))
-    document.build(story)
+                flowable_groups.append([line_flowable(section_name, line)])
+                position += 1
+        if flowable_groups:
+            # Flatten the first group into the section wrapper. Nested
+            # KeepTogether objects can incorrectly reserve a full page.
+            story.append(KeepTogether(section_header + flowable_groups[0]))
+            for group in flowable_groups[1:]:
+                story.append(KeepTogether(group) if len(group) > 1 else group[0])
+        else:
+            story.extend(section_header)
+    document.build(story, onFirstPage=draw_footer, onLaterPages=draw_footer)
     return output.getvalue()
 
 
@@ -2016,35 +2272,101 @@ def inject_styles() -> None:
     st.markdown(
         """
         <style>
-        :root { --ink:#172554; --blue:#2563eb; --soft:#eff6ff; --line:#dbeafe; }
-        .stApp { background:linear-gradient(180deg,#f8fbff 0,#ffffff 390px); }
-        .block-container { max-width:1280px; padding-top:1.25rem; }
-        h1,h2,h3 { color:var(--ink); letter-spacing:-.025em; }
+        :root {
+            --navy:#0b1f3a; --ink:#14213d; --blue:#2563eb; --cyan:#06b6d4;
+            --soft:#f5f8ff; --line:#dce5f3; --muted:#64748b; --white:#ffffff;
+            --shadow:0 18px 45px rgba(15,35,68,.09);
+        }
+        html,body,[class*="css"] { font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+        .stApp {
+            background:radial-gradient(circle at 88% 3%,rgba(6,182,212,.12),transparent 24rem),
+                       radial-gradient(circle at 8% 18%,rgba(37,99,235,.10),transparent 28rem),
+                       linear-gradient(180deg,#f7faff 0,#ffffff 34rem);
+        }
+        [data-testid="stHeader"] { background:rgba(247,250,255,.72); backdrop-filter:blur(14px); }
+        .block-container { max-width:1240px; padding-top:1.1rem; padding-bottom:4rem; }
+        h1,h2,h3 { color:var(--navy); letter-spacing:-.035em; }
+        h2 { margin-top:.2rem; }
+        p { line-height:1.62; }
+        [data-testid="stSidebar"] {
+            background:linear-gradient(180deg,#0b1f3a 0%,#102d52 58%,#0c3b55 100%);
+            border-right:1px solid rgba(255,255,255,.08);
+        }
+        [data-testid="stSidebar"] h1,[data-testid="stSidebar"] h2,[data-testid="stSidebar"] h3,
+        [data-testid="stSidebar"] label,[data-testid="stSidebar"] p { color:#f8fbff; }
+        [data-testid="stSidebar"] hr { border-color:rgba(255,255,255,.14); }
+        [data-testid="stSidebar"] [data-testid="stAlert"] p { color:inherit; }
+        .hs-side-brand { display:flex; align-items:center; gap:.72rem; margin:.15rem 0 1.4rem; }
+        .hs-side-mark { width:2.35rem; height:2.35rem; border-radius:.82rem; display:grid; place-items:center; color:white; font-size:1.2rem; font-weight:900; background:linear-gradient(135deg,#3b82f6,#06b6d4); box-shadow:0 10px 24px rgba(6,182,212,.28); }
+        .hs-side-name { color:#fff; font-size:1.05rem; font-weight:800; line-height:1.05; }
+        .hs-side-caption { color:#a8c4e5; font-size:.73rem; margin-top:.18rem; }
+        .hs-hero { position:relative; overflow:hidden; color:#fff; border-radius:28px; padding:2.15rem 2.3rem 2rem; background:linear-gradient(125deg,#0b1f3a 0%,#123e70 58%,#075a78 100%); box-shadow:0 28px 70px rgba(15,35,68,.20); margin:.35rem 0 1.35rem; }
+        .hs-hero:after { content:""; position:absolute; width:25rem; height:25rem; border-radius:50%; right:-8rem; top:-13rem; background:radial-gradient(circle,rgba(103,232,249,.28),rgba(59,130,246,.04) 62%,transparent 70%); }
+        .hs-hero-top { display:flex; align-items:center; justify-content:space-between; gap:1rem; position:relative; z-index:1; }
+        .hs-brand-chip,.hs-privacy-chip { display:inline-flex; align-items:center; gap:.42rem; border:1px solid rgba(255,255,255,.18); background:rgba(255,255,255,.09); border-radius:999px; padding:.42rem .72rem; color:#dff8ff; font-size:.76rem; font-weight:750; letter-spacing:.035em; }
+        .hs-live-dot { width:.48rem; height:.48rem; background:#34d399; border-radius:50%; box-shadow:0 0 0 4px rgba(52,211,153,.14); }
+        .hs-hero h1 { color:#fff; max-width:800px; font-size:clamp(2.1rem,4.4vw,3.55rem); line-height:1.02; margin:1.25rem 0 .75rem; position:relative; z-index:1; }
+        .hs-hero-copy { max-width:760px; color:#d8e8fb; font-size:1.06rem; margin:0; position:relative; z-index:1; }
+        .hs-hero-pills { display:flex; flex-wrap:wrap; gap:.58rem; margin-top:1.35rem; position:relative; z-index:1; }
+        .hs-hero-pills span { background:rgba(255,255,255,.10); border:1px solid rgba(255,255,255,.13); border-radius:10px; padding:.48rem .7rem; color:#edf7ff; font-size:.78rem; font-weight:650; }
+        .hs-flow { display:grid; grid-template-columns:repeat(3,1fr); gap:.8rem; margin:.85rem 0 1.5rem; }
+        .hs-flow-card { background:rgba(255,255,255,.86); border:1px solid var(--line); border-radius:16px; padding:1rem 1.05rem; box-shadow:0 8px 24px rgba(15,35,68,.045); }
+        .hs-flow-number { color:var(--blue); font-size:.72rem; font-weight:900; letter-spacing:.12em; }
+        .hs-flow-card strong { color:var(--navy); display:block; margin:.22rem 0 .12rem; }
+        .hs-flow-card small { color:var(--muted); line-height:1.45; }
+        .stTabs [data-baseweb="tab-list"] { gap:.35rem; padding:.36rem; border:1px solid var(--line); border-radius:15px; background:rgba(239,246,255,.76); box-shadow:0 6px 20px rgba(15,35,68,.04); }
+        .stTabs [data-baseweb="tab"] { height:2.85rem; border-radius:11px; padding:0 1rem; color:#475569; font-weight:700; }
+        .stTabs [aria-selected="true"] { background:#fff; color:var(--blue); box-shadow:0 6px 16px rgba(37,99,235,.10); }
+        .stTabs [data-baseweb="tab-highlight"] { display:none; }
         [data-testid="stMetric"] {
-            background:#fff; border:1px solid var(--line); border-radius:16px; padding:14px;
+            background:linear-gradient(145deg,#fff,#f8fbff); border:1px solid var(--line); border-radius:16px;
+            padding:15px 16px; box-shadow:0 8px 22px rgba(15,35,68,.05);
         }
+        [data-testid="stMetricValue"] { color:var(--navy); font-weight:820; }
         [data-testid="stForm"] {
-            background:#fff; border:1px solid var(--line); border-radius:18px; padding:20px;
+            background:rgba(255,255,255,.92); border:1px solid var(--line); border-radius:20px;
+            padding:22px; box-shadow:var(--shadow);
         }
-        div[data-testid="stAlert"] { border-radius:14px; }
-        .hs-eyebrow { color:#0369a1; font-weight:800; font-size:.78rem; letter-spacing:.12em; text-transform:uppercase; }
-        .hs-subtle { color:#64748b; margin-top:-.45rem; }
-        .hs-score {
-            background:linear-gradient(135deg,#eff6ff,#ecfeff); border:1px solid #bfdbfe;
-            border-radius:22px; padding:28px; text-align:center; margin:.5rem 0 1.25rem;
-        }
-        .hs-score-number { color:#1d4ed8; font-size:4rem; font-weight:850; line-height:1; }
-        .hs-score-label { color:#172554; font-size:1.15rem; font-weight:750; margin-top:.55rem; }
-        .hs-score-caption { color:#64748b; margin-top:.2rem; }
+        [data-testid="stFileUploaderDropzone"] { background:#f8fbff; border:1.5px dashed #b7c8e5; border-radius:15px; }
+        [data-testid="stExpander"] { background:rgba(255,255,255,.86); border:1px solid var(--line); border-radius:14px; overflow:hidden; box-shadow:0 5px 16px rgba(15,35,68,.035); }
+        div[data-testid="stAlert"] { border-radius:13px; border-width:1px; }
+        .stButton>button[kind="primary"],.stFormSubmitButton>button[kind="primary"] { border:0; color:#fff; font-weight:760; background:linear-gradient(105deg,#2563eb,#0891b2); box-shadow:0 9px 22px rgba(37,99,235,.21); transition:transform .18s ease,box-shadow .18s ease; }
+        .stButton>button[kind="primary"]:hover,.stFormSubmitButton>button[kind="primary"]:hover { transform:translateY(-1px); box-shadow:0 12px 26px rgba(37,99,235,.27); }
+        .stDownloadButton button,.stLinkButton a,.stButton button { border-radius:11px; font-weight:690; }
+        .hs-eyebrow { color:#0e7490; font-weight:850; font-size:.74rem; letter-spacing:.13em; text-transform:uppercase; margin-top:.35rem; }
+        .hs-subtle { color:var(--muted); margin-top:-.45rem; }
+        .hs-score-panel { display:flex; align-items:center; gap:1.75rem; background:linear-gradient(135deg,#ffffff,#f1f7ff); border:1px solid #cedcf1; border-radius:23px; padding:1.55rem 1.75rem; box-shadow:var(--shadow); margin:.55rem 0 1.25rem; }
+        .hs-score-ring { --score:0; width:8.25rem; height:8.25rem; border-radius:50%; flex:0 0 auto; display:grid; place-items:center; background:conic-gradient(#2563eb calc(var(--score)*1%),#dce7f5 0); box-shadow:0 12px 30px rgba(37,99,235,.16); }
+        .hs-score-ring>div { width:6.45rem; height:6.45rem; display:grid; place-content:center; text-align:center; border-radius:50%; background:#fff; }
+        .hs-score-ring strong { color:var(--navy); font-size:2.35rem; line-height:1; }
+        .hs-score-ring span { color:var(--muted); font-size:.72rem; text-transform:uppercase; letter-spacing:.12em; margin-top:.3rem; }
+        .hs-score-copy span { color:#0e7490; font-size:.72rem; font-weight:850; letter-spacing:.12em; text-transform:uppercase; }
+        .hs-score-copy h3 { color:var(--navy); font-size:1.55rem; margin:.28rem 0 .32rem; }
+        .hs-score-copy p { color:var(--muted); margin:0; max-width:570px; }
         .hs-category {
-            background:white; border:1px solid #dbeafe; border-radius:14px;
-            padding:14px 16px; min-height:116px; margin-bottom:12px;
+            background:linear-gradient(145deg,#fff,#f9fbff); border:1px solid var(--line); border-radius:15px;
+            padding:15px 16px; min-height:126px; margin-bottom:12px; box-shadow:0 7px 20px rgba(15,35,68,.045);
+            transition:transform .18s ease,box-shadow .18s ease;
         }
-        .hs-category-name { color:#334155; font-weight:700; }
-        .hs-category-score { color:#1d4ed8; font-weight:850; font-size:1.65rem; }
-        .hs-category-count { color:#64748b; font-size:.86rem; }
-        .hs-privacy { border-left:3px solid #0ea5e9; padding:.65rem 1rem; background:#f0f9ff; border-radius:0 10px 10px 0; }
-        .stDownloadButton button, .stLinkButton a { border-radius:12px; }
+        .hs-category:hover { transform:translateY(-2px); box-shadow:0 11px 25px rgba(15,35,68,.08); }
+        .hs-category-name { color:#334155; font-weight:760; font-size:.87rem; }
+        .hs-category-score { color:var(--navy); font-weight:880; font-size:1.7rem; margin-top:.2rem; }
+        .hs-category-count { color:var(--muted); font-size:.8rem; }
+        .hs-category-bar { height:.38rem; margin-top:.62rem; border-radius:99px; background:#e5edf8; overflow:hidden; }
+        .hs-category-bar span { display:block; height:100%; border-radius:99px; background:linear-gradient(90deg,#2563eb,#06b6d4); }
+        .hs-resume-banner { display:flex; justify-content:space-between; align-items:center; gap:1rem; border-radius:14px 14px 0 0; padding:.78rem 1rem; color:#ddecff; background:linear-gradient(120deg,#0b1f3a,#164e75); margin-top:.35rem; }
+        .hs-resume-banner strong { color:#fff; }
+        .hs-resume-banner span { font-size:.76rem; color:#bcd4ed; }
+        .hs-footer { text-align:center; color:#7b8ba3; font-size:.77rem; padding:2rem 0 .5rem; }
+        @media (max-width:760px) {
+            .block-container { padding-left:1rem; padding-right:1rem; }
+            .hs-hero { border-radius:21px; padding:1.55rem 1.25rem; }
+            .hs-hero-top { align-items:flex-start; flex-direction:column; }
+            .hs-flow { grid-template-columns:1fr; }
+            .hs-score-panel { align-items:flex-start; flex-direction:column; }
+            .hs-score-ring { width:7.3rem; height:7.3rem; }
+            .hs-score-ring>div { width:5.7rem; height:5.7rem; }
+        }
         </style>
         """,
         unsafe_allow_html=True,
@@ -2074,7 +2396,16 @@ def initialize_state() -> None:
 
 def render_sidebar() -> tuple[Settings, bool]:
     with st.sidebar:
-        st.header("Analysis settings")
+        st.markdown(
+            """
+            <div class="hs-side-brand">
+              <div class="hs-side-mark">H</div>
+              <div><div class="hs-side-name">HireSense AI</div><div class="hs-side-caption">Evidence-first career intelligence</div></div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        st.header("Analysis mode")
         configured_key = bool(_secret("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY"))
         api_key = st.text_input(
             "OpenAI API key",
@@ -2436,7 +2767,15 @@ def render_tracker() -> None:
 
 
 def render_resume_preview(candidate: CandidateProfile, optimized: OptimizedResume) -> None:
-    st.markdown("#### Tailored résumé preview")
+    st.markdown(
+        """
+        <div class="hs-resume-banner">
+          <strong>Tailored résumé preview</strong>
+          <span>ATS-safe typography · aligned bullets · recruiter-ready hierarchy</span>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
     with st.container(border=True):
         st.markdown(optimized_resume_markdown(candidate, optimized))
 
@@ -2464,10 +2803,13 @@ def render_report(settings: Settings, use_ai: bool) -> None:
         st.caption(job_line)
     st.markdown(
         f"""
-        <div class="hs-score">
-          <div class="hs-score-number">{report.score}%</div>
-          <div class="hs-score-label">HireSense Match Score · {html.escape(report.alignment)}</div>
-          <div class="hs-score-caption">Overall résumé-to-job alignment</div>
+        <div class="hs-score-panel">
+          <div class="hs-score-ring" style="--score:{report.score}"><div><strong>{report.score}%</strong><span>match</span></div></div>
+          <div class="hs-score-copy">
+            <span>Overall résumé-to-job alignment</span>
+            <h3>{html.escape(report.alignment)}</h3>
+            <p>Calculated from independently assessed job requirements and the exact résumé evidence supporting each one.</p>
+          </div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -2513,6 +2855,7 @@ def render_report(settings: Settings, use_ai: bool) -> None:
                   <div class="hs-category-name">{html.escape(_category_label(item.category))}</div>
                   <div class="hs-category-score">{item.percentage}%</div>
                   <div class="hs-category-count">{item.requirements} requirement{'s' if item.requirements != 1 else ''}</div>
+                  <div class="hs-category-bar"><span style="width:{item.percentage}%"></span></div>
                 </div>
                 """,
                 unsafe_allow_html=True,
@@ -2764,15 +3107,25 @@ def main() -> None:
     inject_styles()
     initialize_state()
     settings, use_ai = render_sidebar()
-    title_col, privacy_col = st.columns([2.6, 1])
-    with title_col:
-        st.title("HireSense AI")
-        st.markdown('<p class="hs-subtle">Evidence-first résumé matching</p>', unsafe_allow_html=True)
-    with privacy_col:
-        st.markdown(
-            '<div class="hs-privacy"><strong>No local file storage</strong><br><small>Uploads remain in session memory.</small></div>',
-            unsafe_allow_html=True,
-        )
+    st.markdown(
+        """
+        <section class="hs-hero">
+          <div class="hs-hero-top">
+            <div class="hs-brand-chip"><span class="hs-live-dot"></span> EVIDENCE-FIRST MATCHING</div>
+            <div class="hs-privacy-chip">◇ Session-only résumé processing</div>
+          </div>
+          <h1>Turn your experience into a stronger application.</h1>
+          <p class="hs-hero-copy">Map every job requirement to verified résumé evidence, understand the gaps, and create a polished tailored résumé without inventing experience.</p>
+          <div class="hs-hero-pills"><span>Explainable score</span><span>Evidence map</span><span>ATS-safe résumé export</span><span>Application tracker</span></div>
+        </section>
+        <div class="hs-flow">
+          <div class="hs-flow-card"><span class="hs-flow-number">01 · DISCOVER</span><strong>Focus your search</strong><small>Build targeted job searches for the roles and locations that matter.</small></div>
+          <div class="hs-flow-card"><span class="hs-flow-number">02 · ANALYZE</span><strong>See the evidence</strong><small>Review requirement-level matches, confidence, gaps, and exact résumé proof.</small></div>
+          <div class="hs-flow-card"><span class="hs-flow-number">03 · TAILOR</span><strong>Apply with clarity</strong><small>Download an aligned, recruiter-ready résumé grounded only in verified facts.</small></div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
     discover_tab, analyze_tab, tracker_tab, method_tab = st.tabs(
         ["1 · Discover", "2 · Analyze", "3 · Application Tracker", "Method"]
     )
@@ -2785,6 +3138,10 @@ def main() -> None:
         render_tracker()
     with method_tab:
         render_method()
+    st.markdown(
+        '<div class="hs-footer">HireSense AI · Explainable matching for more intentional applications</div>',
+        unsafe_allow_html=True,
+    )
 
 
 if __name__ == "__main__":
