@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """HireSense AI - self-contained, evidence-grounded resume matcher.
 
 Run with:
@@ -10,6 +8,8 @@ The OpenAI dependency is optional. Without an API key the application uses a
 deterministic matcher. With a key it uses structured AI extraction and
 assessment, then applies the same evidence and specificity guardrails.
 """
+
+from __future__ import annotations
 
 import csv
 import html
