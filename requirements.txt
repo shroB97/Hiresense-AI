@@ -1,11 +1,6 @@
 streamlit
-pymupdf
-python-docx
-scikit-learn
 pandas
-plotly
-pydantic
-python-dotenv
-pymupdf
+pypdf
 python-docx
+reportlab
 openai
