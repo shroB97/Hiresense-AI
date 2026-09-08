@@ -2303,17 +2303,23 @@ def inject_styles() -> None:
         [data-testid="stSidebar"] label,[data-testid="stSidebar"] p { color:#f8fbff; }
         [data-testid="stSidebar"] hr { border-color:rgba(255,255,255,.14); }
         [data-testid="stSidebar"] [data-testid="stAlert"] p { color:inherit; }
-        .hs-side-brand { display:flex; align-items:center; gap:.72rem; margin:.15rem 0 1.4rem; }
+        .hs-side-brand { display:flex; align-items:center; gap:.72rem; margin:.15rem 0 1.15rem; }
         .hs-side-mark { width:2.35rem; height:2.35rem; border-radius:.82rem; display:grid; place-items:center; color:white; font-size:1.2rem; font-weight:900; background:linear-gradient(135deg,#3b82f6,#06b6d4); box-shadow:0 10px 24px rgba(6,182,212,.28); animation:hs-pop .55s ease-out both; }
         .hs-side-name { color:#fff; font-size:1.05rem; font-weight:800; line-height:1.05; }
         .hs-side-caption { color:#a8c4e5; font-size:.73rem; margin-top:.18rem; }
+        .hs-side-guide { border:1px solid rgba(255,255,255,.12); border-radius:16px; padding:1rem; background:rgba(255,255,255,.06); }
+        .hs-side-guide strong { color:#fff; display:block; font-size:.92rem; margin-bottom:.65rem; }
+        .hs-side-step { display:flex; gap:.62rem; align-items:flex-start; color:#d7e8f8; font-size:.79rem; line-height:1.42; margin:.58rem 0; }
+        .hs-side-step span { display:grid; place-items:center; flex:0 0 auto; width:1.45rem; height:1.45rem; border-radius:50%; color:#fff; font-size:.7rem; font-weight:850; background:linear-gradient(135deg,#2563eb,#06b6d4); }
+        .hs-side-trust { color:#a8c4e5; font-size:.73rem; line-height:1.5; margin-top:1rem; }
         .hs-hero { position:relative; overflow:hidden; color:#fff; border-radius:28px; padding:2.15rem 2.3rem 2rem; background:linear-gradient(125deg,#081d36 0%,#123e70 55%,#066783 100%); box-shadow:0 28px 70px rgba(15,35,68,.20); margin:.35rem 0 1.35rem; animation:hs-pop .58s cubic-bezier(.2,.75,.25,1) both; }
         .hs-hero:before { content:""; position:absolute; inset:0; opacity:.12; background-image:radial-gradient(rgba(255,255,255,.8) .7px,transparent .7px); background-size:20px 20px; mask-image:linear-gradient(110deg,transparent 10%,#000 90%); }
         .hs-hero:after { content:""; position:absolute; width:25rem; height:25rem; border-radius:50%; right:-8rem; top:-13rem; background:radial-gradient(circle,rgba(103,232,249,.28),rgba(59,130,246,.04) 62%,transparent 70%); animation:hs-float 9s ease-in-out infinite; }
         .hs-hero-top { display:flex; align-items:center; justify-content:space-between; gap:1rem; position:relative; z-index:1; }
         .hs-brand-chip,.hs-privacy-chip { display:inline-flex; align-items:center; gap:.42rem; border:1px solid rgba(255,255,255,.18); background:rgba(255,255,255,.09); border-radius:999px; padding:.42rem .72rem; color:#dff8ff; font-size:.76rem; font-weight:750; letter-spacing:.035em; }
         .hs-live-dot { width:.48rem; height:.48rem; background:#34d399; border-radius:50%; box-shadow:0 0 0 4px rgba(52,211,153,.14); animation:hs-glow 2.8s ease-in-out infinite; }
-        .hs-hero h1 { color:#fff; max-width:800px; font-size:clamp(2.1rem,4.4vw,3.55rem); line-height:1.02; margin:1.25rem 0 .75rem; position:relative; z-index:1; animation:hs-enter .62s .08s ease-out both; }
+        .hs-hero h1 { color:#fff; max-width:900px; font-size:clamp(2.1rem,4.4vw,3.55rem); line-height:1.02; margin:1.25rem 0 .75rem; position:relative; z-index:1; animation:hs-enter .62s .08s ease-out both; }
+        .hs-hero h1 span { color:#67e8f9; text-shadow:0 0 28px rgba(103,232,249,.24); }
         .hs-hero-copy { max-width:760px; color:#d8e8fb; font-size:1.06rem; margin:0; position:relative; z-index:1; animation:hs-enter .62s .16s ease-out both; }
         .hs-hero-pills { display:flex; flex-wrap:wrap; gap:.58rem; margin-top:1.35rem; position:relative; z-index:1; animation:hs-enter .62s .24s ease-out both; }
         .hs-hero-pills span { background:rgba(255,255,255,.10); border:1px solid rgba(255,255,255,.13); border-radius:10px; padding:.48rem .7rem; color:#edf7ff; font-size:.78rem; font-weight:650; }
@@ -2325,9 +2331,15 @@ def inject_styles() -> None:
         .hs-flow-number { color:var(--blue); font-size:.72rem; font-weight:900; letter-spacing:.12em; }
         .hs-flow-card strong { color:var(--navy); display:block; margin:.22rem 0 .12rem; }
         .hs-flow-card small { color:var(--muted); line-height:1.45; }
-        .stTabs [data-baseweb="tab-list"] { gap:.35rem; padding:.36rem; border:1px solid var(--line); border-radius:15px; background:rgba(239,246,255,.76); box-shadow:0 6px 20px rgba(15,35,68,.04); }
-        .stTabs [data-baseweb="tab"] { height:2.85rem; border-radius:11px; padding:0 1rem; color:#475569; font-weight:700; }
-        .stTabs [aria-selected="true"] { background:#fff; color:var(--blue); box-shadow:0 6px 16px rgba(37,99,235,.10); }
+        .hs-value-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:.8rem; margin:.4rem 0 1.35rem; }
+        .hs-value-card { border:1px solid var(--line); border-radius:17px; padding:1rem 1.05rem; background:linear-gradient(145deg,#fff,#f8fbff); box-shadow:0 8px 22px rgba(15,35,68,.045); }
+        .hs-value-icon { width:2.05rem; height:2.05rem; display:grid; place-items:center; border-radius:.7rem; color:#fff; font-weight:900; background:linear-gradient(135deg,#2563eb,#0d9488); margin-bottom:.62rem; }
+        .hs-value-card strong { display:block; color:var(--navy); font-size:.95rem; margin-bottom:.24rem; }
+        .hs-value-card span { display:block; color:var(--muted); font-size:.8rem; line-height:1.5; }
+        .stTabs [data-baseweb="tab-list"] { gap:.42rem; padding:.42rem; border:1px solid #cbdcf2; border-radius:16px; background:linear-gradient(120deg,#edf5ff,#eefbf7); box-shadow:0 10px 28px rgba(15,35,68,.07); flex-wrap:wrap; }
+        .stTabs [data-baseweb="tab"] { min-height:3.05rem; border:1px solid transparent; border-radius:12px; padding:0 1.05rem; color:#334155; font-weight:780; cursor:pointer; transition:background .2s ease,color .2s ease,transform .2s ease,box-shadow .2s ease; }
+        .stTabs [data-baseweb="tab"]:hover { color:#1d4ed8; background:rgba(255,255,255,.75); transform:translateY(-1px); }
+        .stTabs [aria-selected="true"] { border-color:transparent; background:linear-gradient(105deg,#1d4ed8,#0284c7)!important; color:#fff!important; box-shadow:0 8px 20px rgba(37,99,235,.25); }
         .stTabs [data-baseweb="tab-highlight"] { display:none; }
         [data-testid="stMetric"] {
             background:linear-gradient(145deg,#fff,#f8fbff); border:1px solid var(--line); border-radius:16px;
@@ -2416,6 +2428,8 @@ def inject_styles() -> None:
             .hs-hero { border-radius:21px; padding:1.55rem 1.25rem; }
             .hs-hero-top { align-items:flex-start; flex-direction:column; }
             .hs-flow { grid-template-columns:1fr; }
+            .hs-value-grid { grid-template-columns:1fr; }
+            .stTabs [data-baseweb="tab"] { flex:1 1 46%; padding:0 .7rem; }
             .hs-score-panel { align-items:flex-start; flex-direction:column; }
             .hs-score-ring { width:7.3rem; height:7.3rem; }
             .hs-score-ring>div { width:5.7rem; height:5.7rem; }
@@ -2442,8 +2456,6 @@ def initialize_state() -> None:
         "company": "",
         "job_location": "",
         "job_description": "",
-        "session_api_key": "",
-        "model": "gpt-4.1-mini",
         "analysis_error": "",
     }
     for key, value in defaults.items():
@@ -2452,45 +2464,25 @@ def initialize_state() -> None:
 
 
 def render_sidebar() -> tuple[Settings, bool]:
+    settings = get_settings()
     with st.sidebar:
         st.markdown(
             """
             <div class="hs-side-brand">
               <div class="hs-side-mark">H</div>
-              <div><div class="hs-side-name">HireSense AI</div><div class="hs-side-caption">Evidence-first career intelligence</div></div>
+              <div><div class="hs-side-name">HireSense</div><div class="hs-side-caption">Smarter, evidence-first applications</div></div>
             </div>
+            <div class="hs-side-guide">
+              <strong>Three steps to a stronger application</strong>
+              <div class="hs-side-step"><span>1</span><div>Upload your résumé and paste a job description.</div></div>
+              <div class="hs-side-step"><span>2</span><div>See your matches, evidence, and priority gaps.</div></div>
+              <div class="hs-side-step"><span>3</span><div>Improve and download a tailored résumé.</div></div>
+            </div>
+            <div class="hs-side-trust">Your résumé is processed for the current session. HireSense never adds experience you did not provide.</div>
             """,
             unsafe_allow_html=True,
         )
-        configured_key = bool(_secret("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY"))
-        with st.expander("Optional AI settings", expanded=False):
-            api_key = st.text_input(
-                "OpenAI API key",
-                type="password",
-                value=st.session_state.session_api_key,
-                placeholder="Already configured" if configured_key else "Optional",
-                help="Used only for this session. You can instead set OPENAI_API_KEY in .streamlit/secrets.toml.",
-            )
-            st.session_state.session_api_key = api_key
-            model = st.text_input("Model", value=st.session_state.model, help="Example: gpt-4.1-mini")
-            st.session_state.model = model
-            settings = get_settings(api_key, model)
-            use_ai = st.toggle(
-                "Use structured AI assessment",
-                value=bool(settings.api_key),
-                disabled=not bool(settings.api_key),
-                help="If disabled, HireSense uses the local deterministic matcher.",
-            )
-            if settings.api_key:
-                st.success("Structured AI assessment is available.")
-            else:
-                st.info("No API key detected. Deterministic matching is ready to use.")
-        st.divider()
-        st.caption(
-            "The app does not write uploads to disk. In AI mode, the job description and retrieved résumé excerpts "
-            "are sent to the configured OpenAI API; deterministic mode stays local."
-        )
-    return settings, use_ai
+    return settings, bool(settings.api_key)
 
 
 def analyze_submission(
@@ -3273,10 +3265,11 @@ def render_discover() -> None:
 
 
 def render_method() -> None:
-    st.header("How the match score works")
+    st.markdown('<div class="hs-eyebrow">How HireSense works</div>', unsafe_allow_html=True)
+    st.header("Transparent matching—not a mystery score")
     st.write(
-        "HireSense first converts the job description into atomic requirements. It then retrieves exact résumé excerpts "
-        "for each requirement and classifies the evidence under strict specificity rules."
+        "HireSense breaks the job description into individual requirements, finds the strongest résumé evidence for "
+        "each one, and shows why it is a direct match, related evidence, uncertain, or missing."
     )
     st.markdown(
         """
@@ -3295,10 +3288,7 @@ def render_method() -> None:
     st.latex(
         r"\text{Match Score}=100\times\frac{\sum(\text{evidence credit}\times\text{importance weight})}{\sum\text{importance weight}}"
     )
-    st.info(
-        "AI mode improves interpretation, but it cannot supply résumé evidence. The code accepts only an exact excerpt "
-        "selected from the uploaded résumé and downgrades unsupported certifications, named frameworks, and tools."
-    )
+    st.info("Every conclusion must point back to the uploaded résumé. Unsupported skills, credentials, tools, and metrics are not added automatically.")
     st.warning("HireSense is decision support—not an employer ATS score, hiring decision, or legal/immigration opinion.")
 
 
@@ -3310,23 +3300,28 @@ def main() -> None:
         """
         <section class="hs-hero">
           <div class="hs-hero-top">
-            <div class="hs-brand-chip"><span class="hs-live-dot"></span> EVIDENCE-FIRST MATCHING</div>
-            <div class="hs-privacy-chip">◇ Session-only résumé processing</div>
+            <div class="hs-brand-chip"><span class="hs-live-dot"></span> HIRESENSE · CAREER INTELLIGENCE</div>
+            <div class="hs-privacy-chip">◇ Evidence before claims</div>
           </div>
-          <h1>Turn your experience into a stronger application.</h1>
-          <p class="hs-hero-copy">Map every job requirement to verified résumé evidence, understand the gaps, and create a polished tailored résumé without inventing experience.</p>
-          <div class="hs-hero-pills"><span>Explainable score</span><span>Evidence map</span><span>ATS-safe résumé export</span><span>Application tracker</span></div>
+          <h1><span>HireSense</span> makes every application clearer and stronger.</h1>
+          <p class="hs-hero-copy">Upload your résumé, paste a job description, and get a clear match report, priority improvements, and a polished tailored résumé.</p>
+          <div class="hs-hero-pills"><span>Understand your fit</span><span>See the proof</span><span>Improve truthfully</span><span>Download and apply</span></div>
         </section>
+        <div class="hs-value-grid">
+          <div class="hs-value-card"><div class="hs-value-icon">✓</div><strong>Know where you stand</strong><span>See which job requirements your résumé supports and which ones need attention.</span></div>
+          <div class="hs-value-card"><div class="hs-value-icon">◎</div><strong>Understand every result</strong><span>Each match is connected to exact evidence from your résumé—not a hidden score.</span></div>
+          <div class="hs-value-card"><div class="hs-value-icon">↗</div><strong>Apply with confidence</strong><span>Improve supported content and export a clean, recruiter-ready résumé.</span></div>
+        </div>
         <div class="hs-flow">
-          <div class="hs-flow-card"><span class="hs-flow-number">01 · ANALYZE</span><strong>See the evidence</strong><small>Review requirement-level matches, confidence, gaps, and exact résumé proof.</small></div>
-          <div class="hs-flow-card"><span class="hs-flow-number">02 · DISCOVER</span><strong>Focus your search</strong><small>Build targeted job searches for the roles and locations that matter.</small></div>
-          <div class="hs-flow-card"><span class="hs-flow-number">03 · TAILOR</span><strong>Apply with clarity</strong><small>Download an aligned, recruiter-ready résumé grounded only in verified facts.</small></div>
+          <div class="hs-flow-card"><span class="hs-flow-number">01 · ANALYZE</span><strong>Upload and compare</strong><small>Add your résumé and the full job description to create your evidence-based report.</small></div>
+          <div class="hs-flow-card"><span class="hs-flow-number">02 · REVIEW</span><strong>Focus on what matters</strong><small>Review your strongest matches, priority gaps, and the résumé evidence behind them.</small></div>
+          <div class="hs-flow-card"><span class="hs-flow-number">03 · IMPROVE</span><strong>Tailor and download</strong><small>Create a polished résumé using only experience and skills you already have.</small></div>
         </div>
         """,
         unsafe_allow_html=True,
     )
     analyze_tab, discover_tab, tailor_tab, tracker_tab, method_tab = st.tabs(
-        ["1 · Analyze", "2 · Discover", "3 · Tailor & Improve", "4 · Application Tracker", "Method"]
+        ["1 · Analyze", "2 · Discover", "3 · Tailor & Improve", "4 · Tracker", "5 · How It Works"]
     )
     with analyze_tab:
         render_analyze_input(settings, use_ai)
@@ -3340,7 +3335,7 @@ def main() -> None:
     with method_tab:
         render_method()
     st.markdown(
-        '<div class="hs-footer">HireSense AI · Explainable matching for more intentional applications</div>',
+        '<div class="hs-footer"><strong>HireSense</strong> · Understand your fit. Improve with evidence. Apply with confidence.</div>',
         unsafe_allow_html=True,
     )
 
