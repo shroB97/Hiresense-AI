@@ -2462,29 +2462,29 @@ def render_sidebar() -> tuple[Settings, bool]:
             """,
             unsafe_allow_html=True,
         )
-        st.header("Analysis mode")
         configured_key = bool(_secret("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY"))
-        api_key = st.text_input(
-            "OpenAI API key",
-            type="password",
-            value=st.session_state.session_api_key,
-            placeholder="Already configured" if configured_key else "Optional",
-            help="Used only for this session. You can instead set OPENAI_API_KEY in .streamlit/secrets.toml.",
-        )
-        st.session_state.session_api_key = api_key
-        model = st.text_input("Model", value=st.session_state.model, help="Example: gpt-4.1-mini")
-        st.session_state.model = model
-        settings = get_settings(api_key, model)
-        use_ai = st.toggle(
-            "Use structured AI assessment",
-            value=bool(settings.api_key),
-            disabled=not bool(settings.api_key),
-            help="If disabled, HireSense uses the local deterministic matcher.",
-        )
-        if settings.api_key:
-            st.success("Structured AI assessment is available.")
-        else:
-            st.info("No API key detected. Deterministic extraction and matching remain available.")
+        with st.expander("Optional AI settings", expanded=False):
+            api_key = st.text_input(
+                "OpenAI API key",
+                type="password",
+                value=st.session_state.session_api_key,
+                placeholder="Already configured" if configured_key else "Optional",
+                help="Used only for this session. You can instead set OPENAI_API_KEY in .streamlit/secrets.toml.",
+            )
+            st.session_state.session_api_key = api_key
+            model = st.text_input("Model", value=st.session_state.model, help="Example: gpt-4.1-mini")
+            st.session_state.model = model
+            settings = get_settings(api_key, model)
+            use_ai = st.toggle(
+                "Use structured AI assessment",
+                value=bool(settings.api_key),
+                disabled=not bool(settings.api_key),
+                help="If disabled, HireSense uses the local deterministic matcher.",
+            )
+            if settings.api_key:
+                st.success("Structured AI assessment is available.")
+            else:
+                st.info("No API key detected. Deterministic matching is ready to use.")
         st.divider()
         st.caption(
             "The app does not write uploads to disk. In AI mode, the job description and retrieved résumé excerpts "
@@ -2529,7 +2529,7 @@ def analyze_submission(
 
 
 def render_analyze_input(settings: Settings, use_ai: bool) -> None:
-    st.markdown('<div class="hs-eyebrow">Step 2 · Analyze</div>', unsafe_allow_html=True)
+    st.markdown('<div class="hs-eyebrow">Step 1 · Analyze</div>', unsafe_allow_html=True)
     st.header("Analyze your résumé against a job")
     st.caption("Upload your résumé and paste the complete job description. Every extracted requirement is evaluated independently.")
     with st.form("analysis_form", clear_on_submit=False, border=True):
@@ -3217,8 +3217,8 @@ def render_report(settings: Settings, use_ai: bool) -> None:
             for warning in report.warnings:
                 st.warning(warning)
 
-    overview_tab, gaps_tab, evidence_tab, tailor_tab = st.tabs(
-        ["Overview", "Priority gaps", "Evidence explorer", "Tailor & export"]
+    overview_tab, gaps_tab, evidence_tab = st.tabs(
+        ["Overview", "Priority gaps", "Evidence explorer"]
     )
     with overview_tab:
         if st.button("Save this job to application tracker", type="secondary", width="stretch"):
@@ -3232,12 +3232,22 @@ def render_report(settings: Settings, use_ai: bool) -> None:
         _render_priority_gaps(candidate, report)
     with evidence_tab:
         _render_evidence_explorer(report)
-    with tailor_tab:
-        _render_tailor_and_exports(settings, use_ai, candidate, report)
+
+
+def render_tailor_workspace(settings: Settings, use_ai: bool) -> None:
+    st.markdown('<div class="hs-eyebrow">Step 3 · Tailor & improve</div>', unsafe_allow_html=True)
+    st.header("Tailor and improve your résumé")
+    st.caption("Turn verified match evidence into a polished, recruiter-ready résumé without inventing experience.")
+    report: MatchReport | None = st.session_state.report
+    candidate: CandidateProfile | None = st.session_state.candidate
+    if not report or not candidate:
+        st.info("Complete an analysis first. Your tailored résumé tools will appear here after the match report is ready.")
+        return
+    _render_tailor_and_exports(settings, use_ai, candidate, report)
 
 
 def render_discover() -> None:
-    st.markdown('<div class="hs-eyebrow">Step 1 · Discover</div>', unsafe_allow_html=True)
+    st.markdown('<div class="hs-eyebrow">Step 2 · Discover</div>', unsafe_allow_html=True)
     st.header("Discover targeted jobs")
     st.caption("Build direct search links, then paste a complete job description into Analyze.")
     with st.form("discovery_form", border=True):
@@ -3308,21 +3318,23 @@ def main() -> None:
           <div class="hs-hero-pills"><span>Explainable score</span><span>Evidence map</span><span>ATS-safe résumé export</span><span>Application tracker</span></div>
         </section>
         <div class="hs-flow">
-          <div class="hs-flow-card"><span class="hs-flow-number">01 · DISCOVER</span><strong>Focus your search</strong><small>Build targeted job searches for the roles and locations that matter.</small></div>
-          <div class="hs-flow-card"><span class="hs-flow-number">02 · ANALYZE</span><strong>See the evidence</strong><small>Review requirement-level matches, confidence, gaps, and exact résumé proof.</small></div>
+          <div class="hs-flow-card"><span class="hs-flow-number">01 · ANALYZE</span><strong>See the evidence</strong><small>Review requirement-level matches, confidence, gaps, and exact résumé proof.</small></div>
+          <div class="hs-flow-card"><span class="hs-flow-number">02 · DISCOVER</span><strong>Focus your search</strong><small>Build targeted job searches for the roles and locations that matter.</small></div>
           <div class="hs-flow-card"><span class="hs-flow-number">03 · TAILOR</span><strong>Apply with clarity</strong><small>Download an aligned, recruiter-ready résumé grounded only in verified facts.</small></div>
         </div>
         """,
         unsafe_allow_html=True,
     )
-    discover_tab, analyze_tab, tracker_tab, method_tab = st.tabs(
-        ["1 · Discover", "2 · Analyze", "3 · Application Tracker", "Method"]
+    analyze_tab, discover_tab, tailor_tab, tracker_tab, method_tab = st.tabs(
+        ["1 · Analyze", "2 · Discover", "3 · Tailor & Improve", "4 · Application Tracker", "Method"]
     )
-    with discover_tab:
-        render_discover()
     with analyze_tab:
         render_analyze_input(settings, use_ai)
         render_report(settings, use_ai)
+    with discover_tab:
+        render_discover()
+    with tailor_tab:
+        render_tailor_workspace(settings, use_ai)
     with tracker_tab:
         render_tracker()
     with method_tab:
