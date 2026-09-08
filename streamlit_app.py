@@ -2268,6 +2268,22 @@ def improved_resume_pdf(candidate: CandidateProfile, optimized: OptimizedResume)
 # ---------------------------------------------------------------------------
 
 
+def hiresense_logo_svg(css_class: str = "hs-logo") -> str:
+    return f"""
+    <svg class="{css_class}" viewBox="0 0 64 64" role="img" aria-label="HireSense logo">
+      <defs>
+        <linearGradient id="hireSenseGradient" x1="8" y1="7" x2="57" y2="58" gradientUnits="userSpaceOnUse">
+          <stop stop-color="#2563EB"/><stop offset="1" stop-color="#0891B2"/>
+        </linearGradient>
+      </defs>
+      <rect x="4" y="4" width="56" height="56" rx="17" fill="url(#hireSenseGradient)"/>
+      <path d="M20 17V45M41 17V45M20 31H41" fill="none" stroke="white" stroke-width="6" stroke-linecap="round"/>
+      <circle cx="49" cy="48" r="11" fill="#10B981" stroke="white" stroke-width="3"/>
+      <path d="M44 48L47.5 51.5L54 44.5" fill="none" stroke="white" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    """
+
+
 def inject_styles() -> None:
     st.markdown(
         """
@@ -2283,6 +2299,9 @@ def inject_styles() -> None:
         @keyframes hs-glow { 0%,100% { box-shadow:0 0 0 4px rgba(52,211,153,.14); } 50% { box-shadow:0 0 0 8px rgba(52,211,153,.05); } }
         @keyframes hs-bar { from { transform:scaleX(0); } to { transform:scaleX(1); } }
         @keyframes hs-gradient { 0% { background-position:0% 50%; } 100% { background-position:100% 50%; } }
+        @keyframes hs-logo-breathe { 0%,100% { transform:translateY(0) rotate(0deg); filter:drop-shadow(0 10px 18px rgba(6,182,212,.18)); } 50% { transform:translateY(-3px) rotate(-1.5deg); filter:drop-shadow(0 16px 24px rgba(6,182,212,.32)); } }
+        @keyframes hs-shine { 0% { transform:translateX(-140%) skewX(-18deg); } 55%,100% { transform:translateX(420%) skewX(-18deg); } }
+        @keyframes hs-pulse-ring { 0% { opacity:.5; transform:scale(.72); } 80%,100% { opacity:0; transform:scale(1.35); } }
         html,body,[class*="css"] { font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
         html { scroll-behavior:smooth; }
         .stApp {
@@ -2303,8 +2322,9 @@ def inject_styles() -> None:
         [data-testid="stSidebar"] label,[data-testid="stSidebar"] p { color:#f8fbff; }
         [data-testid="stSidebar"] hr { border-color:rgba(255,255,255,.14); }
         [data-testid="stSidebar"] [data-testid="stAlert"] p { color:inherit; }
-        .hs-side-brand { display:flex; align-items:center; gap:.72rem; margin:.15rem 0 1.15rem; }
-        .hs-side-mark { width:2.35rem; height:2.35rem; border-radius:.82rem; display:grid; place-items:center; color:white; font-size:1.2rem; font-weight:900; background:linear-gradient(135deg,#3b82f6,#06b6d4); box-shadow:0 10px 24px rgba(6,182,212,.28); animation:hs-pop .55s ease-out both; }
+        .hs-logo { display:block; width:2.75rem; height:2.75rem; flex:0 0 auto; animation:hs-logo-breathe 4.8s ease-in-out infinite; }
+        .hs-logo-hero { width:3.55rem; height:3.55rem; }
+        .hs-side-brand { display:flex; align-items:center; gap:.78rem; margin:.15rem 0 1.15rem; }
         .hs-side-name { color:#fff; font-size:1.05rem; font-weight:800; line-height:1.05; }
         .hs-side-caption { color:#a8c4e5; font-size:.73rem; margin-top:.18rem; }
         .hs-side-guide { border:1px solid rgba(255,255,255,.12); border-radius:16px; padding:1rem; background:rgba(255,255,255,.06); }
@@ -2316,8 +2336,13 @@ def inject_styles() -> None:
         .hs-hero:before { content:""; position:absolute; inset:0; opacity:.12; background-image:radial-gradient(rgba(255,255,255,.8) .7px,transparent .7px); background-size:20px 20px; mask-image:linear-gradient(110deg,transparent 10%,#000 90%); }
         .hs-hero:after { content:""; position:absolute; width:25rem; height:25rem; border-radius:50%; right:-8rem; top:-13rem; background:radial-gradient(circle,rgba(103,232,249,.28),rgba(59,130,246,.04) 62%,transparent 70%); animation:hs-float 9s ease-in-out infinite; }
         .hs-hero-top { display:flex; align-items:center; justify-content:space-between; gap:1rem; position:relative; z-index:1; }
+        .hs-hero-brand { display:flex; align-items:center; gap:.8rem; }
+        .hs-hero-brand strong { display:block; color:#fff; font-size:1.15rem; letter-spacing:-.02em; }
+        .hs-hero-brand span { display:block; color:#a9dcf2; font-size:.72rem; letter-spacing:.11em; text-transform:uppercase; margin-top:.12rem; }
+        .hs-hero-shine { position:absolute; inset:0 auto 0 -15%; width:16%; z-index:0; pointer-events:none; background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent); animation:hs-shine 7s ease-in-out infinite; }
         .hs-brand-chip,.hs-privacy-chip { display:inline-flex; align-items:center; gap:.42rem; border:1px solid rgba(255,255,255,.18); background:rgba(255,255,255,.09); border-radius:999px; padding:.42rem .72rem; color:#dff8ff; font-size:.76rem; font-weight:750; letter-spacing:.035em; }
-        .hs-live-dot { width:.48rem; height:.48rem; background:#34d399; border-radius:50%; box-shadow:0 0 0 4px rgba(52,211,153,.14); animation:hs-glow 2.8s ease-in-out infinite; }
+        .hs-live-dot { position:relative; width:.48rem; height:.48rem; background:#34d399; border-radius:50%; box-shadow:0 0 0 4px rgba(52,211,153,.14); animation:hs-glow 2.8s ease-in-out infinite; }
+        .hs-live-dot:after { content:""; position:absolute; inset:-.42rem; border:1px solid rgba(52,211,153,.55); border-radius:50%; animation:hs-pulse-ring 2.4s ease-out infinite; }
         .hs-hero h1 { color:#fff; max-width:900px; font-size:clamp(2.1rem,4.4vw,3.55rem); line-height:1.02; margin:1.25rem 0 .75rem; position:relative; z-index:1; animation:hs-enter .62s .08s ease-out both; }
         .hs-hero h1 span { color:#67e8f9; text-shadow:0 0 28px rgba(103,232,249,.24); }
         .hs-hero-copy { max-width:760px; color:#d8e8fb; font-size:1.06rem; margin:0; position:relative; z-index:1; animation:hs-enter .62s .16s ease-out both; }
@@ -2333,6 +2358,10 @@ def inject_styles() -> None:
         .hs-flow-card small { color:var(--muted); line-height:1.45; }
         .hs-value-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:.8rem; margin:.4rem 0 1.35rem; }
         .hs-value-card { border:1px solid var(--line); border-radius:17px; padding:1rem 1.05rem; background:linear-gradient(145deg,#fff,#f8fbff); box-shadow:0 8px 22px rgba(15,35,68,.045); }
+        .hs-value-card { transition:transform .22s ease,border-color .22s ease,box-shadow .22s ease; animation:hs-enter .58s ease-out both; }
+        .hs-value-card:nth-child(2) { animation-delay:.1s; }
+        .hs-value-card:nth-child(3) { animation-delay:.2s; }
+        .hs-value-card:hover { transform:translateY(-5px); border-color:#a9cdec; box-shadow:0 18px 38px rgba(15,35,68,.10); }
         .hs-value-icon { width:2.05rem; height:2.05rem; display:grid; place-items:center; border-radius:.7rem; color:#fff; font-weight:900; background:linear-gradient(135deg,#2563eb,#0d9488); margin-bottom:.62rem; }
         .hs-value-card strong { display:block; color:var(--navy); font-size:.95rem; margin-bottom:.24rem; }
         .hs-value-card span { display:block; color:var(--muted); font-size:.8rem; line-height:1.5; }
@@ -2423,6 +2452,9 @@ def inject_styles() -> None:
         .hs-resume-banner strong { color:#fff; }
         .hs-resume-banner span { font-size:.76rem; color:#bcd4ed; }
         .hs-footer { text-align:center; color:#7b8ba3; font-size:.77rem; padding:2rem 0 .5rem; }
+        .hs-guide-hero { border:1px solid #cfe0f4; border-radius:18px; padding:1.05rem 1.15rem; background:linear-gradient(120deg,#eff6ff,#ecfdf5); margin:.25rem 0 1rem; animation:hs-enter .55s ease-out both; }
+        .hs-guide-hero strong { color:var(--navy); display:block; font-size:1rem; }
+        .hs-guide-hero span { color:var(--muted); font-size:.82rem; }
         @media (max-width:760px) {
             .block-container { padding-left:1rem; padding-right:1rem; }
             .hs-hero { border-radius:21px; padding:1.55rem 1.25rem; }
@@ -2457,6 +2489,12 @@ def initialize_state() -> None:
         "job_location": "",
         "job_description": "",
         "analysis_error": "",
+        "guide_messages": [
+            {
+                "role": "assistant",
+                "content": "Hi! I’m the HireSense Guide. Ask me how to analyze a job, understand your score, tailor your résumé, or download your results.",
+            }
+        ],
     }
     for key, value in defaults.items():
         if key not in st.session_state:
@@ -2467,9 +2505,9 @@ def render_sidebar() -> tuple[Settings, bool]:
     settings = get_settings()
     with st.sidebar:
         st.markdown(
-            """
+            f"""
             <div class="hs-side-brand">
-              <div class="hs-side-mark">H</div>
+              {hiresense_logo_svg()}
               <div><div class="hs-side-name">HireSense</div><div class="hs-side-caption">Smarter, evidence-first applications</div></div>
             </div>
             <div class="hs-side-guide">
@@ -3292,15 +3330,69 @@ def render_method() -> None:
     st.warning("HireSense is decision support—not an employer ATS score, hiring decision, or legal/immigration opinion.")
 
 
+def hiresense_guide_response(prompt: str) -> str:
+    question = clean_line(prompt).casefold()
+    if any(term in question for term in ("start", "use", "how do", "begin", "upload")):
+        return "Start in **1 · Analyze**. Upload a text-based PDF or DOCX résumé, paste the complete job description, add the job details, and select **Create explainable match report**."
+    if any(term in question for term in ("score", "percentage", "match", "direct", "related", "uncertain", "missing")):
+        return "HireSense checks every job requirement separately. **Direct** means clearly proven, **Related** means transferable evidence, **Uncertain** needs confirmation, and **Missing** means no specific résumé evidence was found. Required qualifications count more than preferred ones."
+    if any(term in question for term in ("tailor", "improve", "rewrite", "resume", "résumé")):
+        return "Create a match report first, then open **3 · Tailor & Improve**. HireSense improves clarity and supported keyword placement without adding experience, tools, or credentials that are not in your résumé."
+    if any(term in question for term in ("download", "word", "docx", "pdf", "csv", "export")):
+        return "After analysis, open **3 · Tailor & Improve**. You can download the tailored résumé as Word or PDF, plus the evidence map as CSV and the match report as PDF."
+    if any(term in question for term in ("privacy", "private", "data", "save", "secure")):
+        return "Uploads are used for the current Streamlit session and are not deliberately written to app storage. If the project owner enables structured AI, selected résumé evidence and the job description may be sent to the configured model provider."
+    if any(term in question for term in ("api", "key", "free", "cost", "charge")):
+        return "You do **not** need an API key to use HireSense. The public app includes deterministic parsing, evidence matching, recommendations, tracking, and document exports."
+    if any(term in question for term in ("discover", "linkedin", "indeed", "google", "job search")):
+        return "Open **2 · Discover**, enter target titles and locations, and HireSense will build direct searches for LinkedIn, Indeed, and Google Jobs."
+    if any(term in question for term in ("error", "scan", "ocr", "not working", "fail")):
+        return "Use a PDF or DOCX under 10 MB and paste at least 100 characters of the job description. Scanned PDFs need searchable OCR text. If parsing still fails, export the résumé as a new PDF or DOCX and try again."
+    return "I can help with **getting started, match scores, evidence statuses, résumé tailoring, downloads, privacy, costs, job discovery,** and **upload errors**. Try asking: “How is my score calculated?”"
+
+
+def _append_guide_exchange(prompt: str) -> None:
+    cleaned = clean_line(prompt)
+    if not cleaned:
+        return
+    st.session_state.guide_messages.append({"role": "user", "content": cleaned})
+    st.session_state.guide_messages.append({"role": "assistant", "content": hiresense_guide_response(cleaned)})
+    st.session_state.guide_messages = st.session_state.guide_messages[-10:]
+
+
+def render_guide() -> None:
+    st.markdown('<div class="hs-eyebrow">No-key product assistant</div>', unsafe_allow_html=True)
+    st.header("Ask the HireSense Guide")
+    st.markdown(
+        '<div class="hs-guide-hero"><strong>Instant help—no API key required</strong><span>This guided assistant answers common product and workflow questions using built-in HireSense knowledge.</span></div>',
+        unsafe_allow_html=True,
+    )
+    quick_prompts = ["How do I start?", "How is the score calculated?", "Is my résumé private?"]
+    quick_cols = st.columns(3)
+    for index, prompt in enumerate(quick_prompts):
+        if quick_cols[index].button(prompt, key=f"guide_quick_{index}", width="stretch"):
+            _append_guide_exchange(prompt)
+    for message in st.session_state.guide_messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
+    with st.form("guide_question_form", clear_on_submit=True, border=False):
+        question = st.text_input("Ask a question", placeholder="Example: Where can I download the tailored résumé?")
+        submitted = st.form_submit_button("Ask HireSense", type="primary", width="stretch")
+    if submitted and clean_line(question):
+        _append_guide_exchange(question)
+        st.rerun()
+
+
 def main() -> None:
     inject_styles()
     initialize_state()
     settings, use_ai = render_sidebar()
     st.markdown(
-        """
+        f"""
         <section class="hs-hero">
+          <div class="hs-hero-shine"></div>
           <div class="hs-hero-top">
-            <div class="hs-brand-chip"><span class="hs-live-dot"></span> HIRESENSE · CAREER INTELLIGENCE</div>
+            <div class="hs-hero-brand">{hiresense_logo_svg("hs-logo hs-logo-hero")}<div><strong>HireSense</strong><span>Career Intelligence</span></div></div>
             <div class="hs-privacy-chip">◇ Evidence before claims</div>
           </div>
           <h1><span>HireSense</span> makes every application clearer and stronger.</h1>
@@ -3320,8 +3412,8 @@ def main() -> None:
         """,
         unsafe_allow_html=True,
     )
-    analyze_tab, discover_tab, tailor_tab, tracker_tab, method_tab = st.tabs(
-        ["1 · Analyze", "2 · Discover", "3 · Tailor & Improve", "4 · Tracker", "5 · How It Works"]
+    analyze_tab, discover_tab, tailor_tab, tracker_tab, method_tab, guide_tab = st.tabs(
+        ["1 · Analyze", "2 · Discover", "3 · Tailor & Improve", "4 · Tracker", "5 · How It Works", "6 · Ask HireSense"]
     )
     with analyze_tab:
         render_analyze_input(settings, use_ai)
@@ -3334,6 +3426,8 @@ def main() -> None:
         render_tracker()
     with method_tab:
         render_method()
+    with guide_tab:
+        render_guide()
     st.markdown(
         '<div class="hs-footer"><strong>HireSense</strong> · Understand your fit. Improve with evidence. Apply with confidence.</div>',
         unsafe_allow_html=True,

@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="hiresense-logo.svg" width="92" alt="HireSense logo">
+
 # HireSense
 
 ### Understand your fit. Improve with evidence. Apply with confidence.
@@ -62,6 +64,13 @@ Generate a polished résumé using only supported experience. Review the changes
 - Downloadable match-report PDF and evidence CSV
 - A session-based application tracker
 - Targeted LinkedIn, Indeed, and Google Jobs search links
+- A built-in HireSense Guide chatbot that works without an API key
+
+## No-key HireSense Guide
+
+The in-app chatbot answers common questions about using HireSense, understanding match statuses, tailoring résumés, downloading files, privacy, costs, and upload errors. It uses deterministic, built-in guidance—so it remains free and does not require an external AI service.
+
+This makes the assistant predictable and private, although it is intentionally more focused than an open-ended generative chatbot.
 
 ## How the matching engine works
 
@@ -95,6 +104,7 @@ Required qualifications receive more importance than preferred qualifications. T
 | Document parsing | pypdf, python-docx |
 | Matching | Requirement decomposition, deterministic retrieval, evidence validation |
 | AI assistance | Optional OpenAI structured generation with evidence guardrails |
+| Product assistant | Deterministic rule-based chatbot with no user API key |
 | Data and reporting | pandas, CSV generation, ReportLab |
 | Résumé exports | python-docx and ReportLab PDF |
 | Quality | Python compilation checks and pytest-ready test structure |
