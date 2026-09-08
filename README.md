@@ -1,24 +1,24 @@
 <div align="center">
 
-<img src="meritloom-logo.svg" width="92" alt="MeritLoom logo">
+<img src="resumemapper-logo.svg" width="92" alt="ResumeMapper logo">
 
-# MeritLoom
+# ResumeMapper
 
 ### Understand your fit. Improve with evidence. Apply with confidence.
 
-MeritLoom turns a résumé and job description into a clear match report, practical improvement priorities, and a professionally formatted tailored résumé.
+ResumeMapper turns a résumé and job description into a clear match report, practical improvement priorities, and a professionally formatted tailored résumé.
 
-[![Try MeritLoom](https://img.shields.io/badge/Try_MeritLoom-2563EB?style=for-the-badge&logo=streamlit&logoColor=white)](https://hiresense-ai-shro.streamlit.app/)
+[![Try ResumeMapper](https://img.shields.io/badge/Try_ResumeMapper-2563EB?style=for-the-badge&logo=streamlit&logoColor=white)](https://hiresense-ai-shro.streamlit.app/)
 [![Python](https://img.shields.io/badge/Python-3.12-0F2344?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![Streamlit](https://img.shields.io/badge/Streamlit-Live_App-059669?style=for-the-badge&logo=streamlit&logoColor=white)](https://streamlit.io/)
 
 </div>
 
-![MeritLoom product overview](docs/images/hiresense-overview-1788821164017.jpg)
+![ResumeMapper product overview](docs/images/hiresense-overview-1788821164017.jpg)
 
-## What is MeritLoom?
+## What is ResumeMapper?
 
-Most résumé tools return a score without explaining it. MeritLoom shows exactly **which job requirements are supported, what résumé evidence proves them, and what needs attention**.
+Most résumé tools return a score without explaining it. ResumeMapper shows exactly **which job requirements are supported, what résumé evidence proves them, and what needs attention**.
 
 It helps users answer three questions:
 
@@ -35,13 +35,13 @@ It helps users answer three questions:
 | Recruiters and hiring teams | Receive clearer résumés with more relevant and supportable experience |
 | Business and technical stakeholders | Review a practical explainable-AI product with transparent scoring and guardrails |
 
-MeritLoom can reduce repetitive résumé review, improve application quality, and make career guidance more consistent—while keeping the candidate responsible for the final content.
+ResumeMapper can reduce repetitive résumé review, improve application quality, and make career guidance more consistent—while keeping the candidate responsible for the final content.
 
 ## A simple three-step workflow
 
 ### 1. Analyze
 
-Upload a PDF or DOCX résumé and paste the complete job description. MeritLoom evaluates each requirement independently.
+Upload a PDF or DOCX résumé and paste the complete job description. ResumeMapper evaluates each requirement independently.
 
 ### 2. Understand
 
@@ -51,7 +51,7 @@ Review the overall match, strongest evidence, priority gaps, category coverage, 
 
 Generate a polished résumé using only supported experience. Review the changes, then download Word and PDF versions.
 
-![MeritLoom analysis workspace](docs/images/hiresense-analyze-1788821221851.jpg)
+![ResumeMapper analysis workspace](docs/images/hiresense-analyze-1788821221851.jpg)
 
 ## What users receive
 
@@ -64,11 +64,11 @@ Generate a polished résumé using only supported experience. Review the changes
 - Downloadable match-report PDF and evidence CSV
 - A session-based application tracker
 - Targeted LinkedIn, Indeed, and Google Jobs search links
-- A built-in MeritLoom Guide chatbot that works without an API key
+- A built-in ResumeMapper Guide chatbot that works without an API key
 
-## No-key MeritLoom Guide
+## No-key ResumeMapper Guide
 
-The in-app chatbot answers common questions about using MeritLoom, understanding match statuses, tailoring résumés, downloading files, privacy, costs, and upload errors. It uses deterministic, built-in guidance—so it remains free and does not require an external AI service.
+The in-app chatbot answers common questions about using ResumeMapper, understanding match statuses, tailoring résumés, downloading files, privacy, costs, and upload errors. It uses deterministic, built-in guidance—so it remains free and does not require an external AI service.
 
 This makes the assistant predictable and private, although it is intentionally more focused than an open-ended generative chatbot.
 
@@ -118,7 +118,7 @@ Required qualifications receive more importance than preferred qualifications. T
 - Uploads are processed for the current Streamlit session and are not deliberately saved by the app.
 - The application works without requiring users to provide an API key.
 
-> MeritLoom is decision support. It is not an employer ATS score, a hiring decision, or legal or immigration advice.
+> ResumeMapper is decision support. It is not an employer ATS score, a hiring decision, or legal or immigration advice.
 
 ## Run locally
 
@@ -139,7 +139,7 @@ For Windows PowerShell, activate the environment with:
 
 ## Optional AI configuration
 
-MeritLoom runs with deterministic matching by default. Project owners can enable structured AI interpretation by adding these values to Streamlit secrets or a local `.streamlit/secrets.toml` file:
+ResumeMapper runs with deterministic matching by default. Project owners can enable structured AI interpretation by adding these values to Streamlit secrets or a local `.streamlit/secrets.toml` file:
 
 ```toml
 OPENAI_API_KEY = "your-api-key"
@@ -157,6 +157,6 @@ Never commit API keys or secret files to GitHub.
 
 <div align="center">
 
-**MeritLoom — evidence-first career intelligence for better applications.**
+**ResumeMapper — evidence-first career intelligence for better applications.**
 
 </div>
