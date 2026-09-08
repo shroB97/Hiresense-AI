@@ -2269,19 +2269,16 @@ def improved_resume_pdf(candidate: CandidateProfile, optimized: OptimizedResume)
 
 
 def hiresense_logo_svg(css_class: str = "hs-logo") -> str:
-    return f"""
-    <svg class="{css_class}" viewBox="0 0 64 64" role="img" aria-label="HireSense logo">
-      <defs>
-        <linearGradient id="hireSenseGradient" x1="8" y1="7" x2="57" y2="58" gradientUnits="userSpaceOnUse">
-          <stop stop-color="#2563EB"/><stop offset="1" stop-color="#0891B2"/>
-        </linearGradient>
-      </defs>
-      <rect x="4" y="4" width="56" height="56" rx="17" fill="url(#hireSenseGradient)"/>
-      <path d="M20 17V45M41 17V45M20 31H41" fill="none" stroke="white" stroke-width="6" stroke-linecap="round"/>
-      <circle cx="49" cy="48" r="11" fill="#10B981" stroke="white" stroke-width="3"/>
-      <path d="M44 48L47.5 51.5L54 44.5" fill="none" stroke="white" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>
-    """
+    return (
+        f'<svg class="{css_class}" viewBox="0 0 64 64" role="img" aria-label="HireSense logo">'
+        '<defs><linearGradient id="hireSenseGradient" x1="8" y1="7" x2="57" y2="58" gradientUnits="userSpaceOnUse">'
+        '<stop stop-color="#2563EB"/><stop offset="1" stop-color="#0891B2"/></linearGradient></defs>'
+        '<rect x="4" y="4" width="56" height="56" rx="17" fill="url(#hireSenseGradient)"/>'
+        '<path d="M20 17V45M41 17V45M20 31H41" fill="none" stroke="white" stroke-width="6" stroke-linecap="round"/>'
+        '<circle cx="49" cy="48" r="11" fill="#10B981" stroke="white" stroke-width="3"/>'
+        '<path d="M44 48L47.5 51.5L54 44.5" fill="none" stroke="white" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>'
+        '</svg>'
+    )
 
 
 def inject_styles() -> None:
